@@ -31,16 +31,12 @@ This creates:
 From project root:
 
 ```bash
-node scripts/supabase/import-photos.mjs
+npm run supabase:import:photos
 ```
 
-The script reads:
+The script reads `data/photos.json` and upserts into `public.photos`.
 
-- `/Users/coldbrew/Documents/photo_blog/photo_blog/data/photos.json`
-
-Then upserts into:
-
-- `public.photos`
+If your JSON source is already removed, skip this step.
 
 ## 4) Verify
 
@@ -51,18 +47,15 @@ select count(*) from public.photos;
 select slug, created_at from public.photos order by created_at desc limit 5;
 ```
 
-## 5) Storage Upload (manual in Phase 1)
+## 5) Storage Upload + URL Sync
 
-Upload all files from:
+Run:
 
-- `/Users/coldbrew/Documents/photo_blog/photo_blog/public/photos`
+```bash
+npm run supabase:sync:storage
+```
 
-To bucket:
+This command:
 
-- `photos`
-
-Object path recommendation:
-
-- Keep only filename (for example `IMG_7804.JPG`)
-
-`storage_path` is prefilled from existing `src` (`/photos/<file>`) so later URL conversion is straightforward.
+- uploads files referenced by `public.photos.storage_path` to `photos` bucket
+- rewrites `public.photos.src` to Supabase public URL

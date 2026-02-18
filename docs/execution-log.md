@@ -153,3 +153,26 @@
   - `npm run lint`
 - Next action:
   - Create commit, then upload files to Supabase Storage and update DB `src` to public URLs.
+
+## 2026-02-18 - Storage Sync + Public URL Cutover
+
+- Goal: Finish remaining migration work by uploading images to Supabase Storage and switching DB image URLs.
+- Steps taken:
+  - Added `/Users/coldbrew/Documents/photo_blog/photo_blog/scripts/supabase/sync-storage.mjs`.
+  - Added npm script `supabase:sync:storage` in `/Users/coldbrew/Documents/photo_blog/photo_blog/package.json`.
+  - Ran `npm run supabase:sync:storage`.
+  - Verified DB rows now contain Supabase public URL in `src`.
+  - Updated docs in `README.md` and `docs/supabase-phase1.md` to reflect JSON removal and new sync command.
+- Troubleshooting:
+  - Issue: first sync attempt failed on `DSC00636.heif` upload.
+  - Cause: script uploaded every local file, including files not referenced by DB.
+  - Fix: changed script to upload only filenames listed in `public.photos.storage_path`.
+- Tech stack/tools used:
+  - Supabase Storage API
+  - Supabase Postgres update API
+  - Node.js scripts
+- Usage notes/commands:
+  - `npm run supabase:sync:storage`
+  - `node --env-file=.env.local -e "...select slug,src from photos..."` (verification)
+- Next action:
+  - Run `npm run dev` and verify feed/detail images render from Supabase URLs in browser.

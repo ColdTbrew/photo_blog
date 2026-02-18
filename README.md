@@ -61,13 +61,17 @@ npm run dev
 실행 순서:
 
 1. Supabase SQL Editor에서 `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0001_create_photos.sql` 실행
-2. 메타데이터 import:
+2. (초기 1회) 메타데이터 import (`data/photos.json`이 있을 때):
 
 ```bash
 npm run supabase:import:photos
 ```
 
-3. `/Users/coldbrew/Documents/photo_blog/photo_blog/public/photos` 이미지 파일을 `photos` 버킷으로 업로드
+3. 스토리지 업로드 + DB `src` URL 동기화:
+
+```bash
+npm run supabase:sync:storage
+```
 
 ## Roadmap
 
@@ -84,7 +88,7 @@ npm run supabase:import:photos
 - GPS 좌표를 장소명(도시/스팟)으로 역지오코딩
 - 이미지 자체를 AI 비전 모델로 분석해 장면/피사체 태그 생성
 - EXIF/GPS + 비전 분석 결과를 합쳐 캡션/태그 자동 생성
-- 생성 결과를 `data/photos.json`에 반영하고 수동 수정 가능하게 유지
+- 생성 결과를 Supabase `public.photos`에 반영하고 수동 수정 가능하게 유지
 
 권장 파이프라인 출력 필드:
 
