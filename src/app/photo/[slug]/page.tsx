@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `${photo.title} | Photo Blog`,
+    title: `${photo.title} | Lightlog`,
     description: photo.caption,
     openGraph: {
       title: photo.title,

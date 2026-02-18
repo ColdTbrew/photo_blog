@@ -8,8 +8,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Photo Blog",
-  description: "A personal infinite-scrolling photo blog.",
+  title: "Lightlog by Coldbrew",
+  description: "A personal infinite-scrolling photo journal by Coldbrew.",
 };
 
 export default function RootLayout({

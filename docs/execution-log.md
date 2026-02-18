@@ -176,3 +176,22 @@
   - `node --env-file=.env.local -e "...select slug,src from photos..."` (verification)
 - Next action:
   - Run `npm run dev` and verify feed/detail images render from Supabase URLs in browser.
+
+## 2026-02-18 - Branding Update (Lightlog by Coldbrew)
+
+- Goal: Apply chosen brand naming across visible UI and metadata.
+- Steps taken:
+  - Updated global metadata title/description in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/layout.tsx`.
+  - Updated home header branding in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/page.tsx`.
+  - Updated photo detail page metadata suffix in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/photo/[slug]/page.tsx`.
+  - Ran lint check.
+- Troubleshooting:
+  - Troubleshooting: none.
+- Tech stack/tools used:
+  - Next.js App Router metadata
+  - TypeScript
+  - ESLint
+- Usage notes/commands:
+  - `npm run lint`
+- Next action:
+  - Add custom domain/OG image and finalize production brand assets.
