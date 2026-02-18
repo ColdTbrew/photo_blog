@@ -39,7 +39,9 @@ function warnDuplicateSlugs(items: Photo[]): void {
   }
 }
 
-let cache: Photo[] | null = null;
+export function invalidatePhotosCache() {
+  // no-op: kept for compatibility with admin upload route
+}
 
 function getSupabaseReadClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -91,14 +93,10 @@ async function getAllPhotosFromSupabase(): Promise<Photo[]> {
   const rows = (data ?? []) as PhotoRow[];
   const photos = rows.map(mapRowToPhoto);
   warnDuplicateSlugs(photos);
-  cache = photos;
   return photos;
 }
 
 export async function getAllPhotos(): Promise<Photo[]> {
-  if (cache) {
-    return cache;
-  }
   return await getAllPhotosFromSupabase();
 }
 

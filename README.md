@@ -57,6 +57,7 @@ npm run dev
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `ADMIN_UPLOAD_TOKEN` (관리자 업로드 API 보호용)
 
 실행 순서:
 
@@ -71,6 +72,39 @@ npm run supabase:import:photos
 
 ```bash
 npm run supabase:sync:storage
+```
+
+## Admin Upload
+
+- 경로: `/admin/upload`
+- 동작:
+  - 이미지 파일 업로드
+  - `photos` 버킷 저장
+  - `public.photos` 레코드 자동 생성
+- 보안:
+  - 폼의 Admin Token 값이 서버 환경변수 `ADMIN_UPLOAD_TOKEN`과 일치해야 업로드 허용
+
+## Vercel CLI Usage
+
+이 환경에서는 전역 `vercel` 대신 `npx vercel` 사용:
+
+```bash
+npx vercel whoami
+npx vercel env ls
+```
+
+환경변수 추가:
+
+```bash
+printf '%s\n' "$ADMIN_UPLOAD_TOKEN" | npx vercel env add ADMIN_UPLOAD_TOKEN development
+printf '%s\n' "$ADMIN_UPLOAD_TOKEN" | npx vercel env add ADMIN_UPLOAD_TOKEN preview
+printf '%s\n' "$ADMIN_UPLOAD_TOKEN" | npx vercel env add ADMIN_UPLOAD_TOKEN production
+```
+
+배포:
+
+```bash
+npx vercel --prod
 ```
 
 ## Roadmap

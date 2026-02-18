@@ -195,3 +195,100 @@
   - `npm run lint`
 - Next action:
   - Add custom domain/OG image and finalize production brand assets.
+
+## 2026-02-18 - Admin Upload MVP Added
+
+- Goal: Add admin upload page to create photos without manual SQL/script steps.
+- Steps taken:
+  - Added API route `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts`.
+  - Added admin UI page `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx`.
+  - Added cache invalidation helper in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/photos.ts`.
+  - Added `ADMIN_UPLOAD_TOKEN` env template in `/Users/coldbrew/Documents/photo_blog/photo_blog/.env.example`.
+  - Updated admin usage docs in `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`.
+- Troubleshooting:
+  - Troubleshooting: none.
+- Tech stack/tools used:
+  - Next.js App Router API Routes + Client Page
+  - Supabase Storage + Postgres insert (service role key)
+  - Token-based endpoint protection
+- Usage notes/commands:
+  - Open `/admin/upload`
+  - Input `ADMIN_UPLOAD_TOKEN`
+  - Fill metadata + select image + upload
+- Next action:
+  - Replace token form with Supabase Auth session-based admin guard.
+
+## 2026-02-18 21:56 KST - EXIF Fields Documentation (No Implementation)
+
+- Goal: Record available EXIF metadata fields for future planning without implementing any feature changes.
+- Steps taken:
+  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/supabase-phase1.md`.
+  - Added a dedicated section listing EXIF fields observed from sample image metadata.
+  - Explicitly documented that parsing/storage/display is not implemented yet.
+- Troubleshooting:
+  - Troubleshooting: none.
+- Tech stack/tools used:
+  - Markdown documentation
+  - Shell command: `date` (timestamp confirmation)
+- Usage notes/commands:
+  - Reference doc: `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/supabase-phase1.md`
+- Next action:
+  - If needed, define DB/app requirements for selected EXIF fields in a separate implementation phase.
+
+## 2026-02-18 - Vercel Env Sync for Admin Upload Token
+
+- Goal: Add ADMIN_UPLOAD_TOKEN to Vercel project environments.
+- Steps taken:
+  - Checked Vercel project link from `.vercel/project.json`.
+  - Verified Vercel login via `npx vercel whoami`.
+  - Added `ADMIN_UPLOAD_TOKEN` from local `.env.local` to Development, Preview, Production.
+  - Verified with `npx vercel env ls`.
+- Troubleshooting:
+  - Issue: `vercel` command not found.
+  - Cause: Vercel CLI not installed globally in current shell.
+  - Fix: used `npx vercel ...` commands.
+- Tech stack/tools used:
+  - Vercel CLI (`npx vercel`)
+- Usage notes/commands:
+  - `npx vercel env add ADMIN_UPLOAD_TOKEN development|preview|production`
+  - `npx vercel env ls`
+- Next action:
+  - Redeploy and validate `/admin/upload` in production.
+
+## 2026-02-18 - Vercel CLI Usage Documentation
+
+- Goal: Document repeatable Vercel CLI usage in project docs.
+- Steps taken:
+  - Added `Vercel CLI Usage` section in `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`.
+  - Included login check, env list, env add, and production deploy commands.
+- Troubleshooting:
+  - Troubleshooting: none.
+- Tech stack/tools used:
+  - Vercel CLI (`npx vercel`)
+- Usage notes/commands:
+  - `npx vercel whoami`
+  - `npx vercel env ls`
+  - `npx vercel env add ...`
+  - `npx vercel --prod`
+- Next action:
+  - Commit docs update.
+
+## 2026-02-18 - Local Upload Not Visible (Cache Issue)
+
+- Goal: Fix newly uploaded image not appearing immediately on localhost.
+- Steps taken:
+  - Removed long-lived in-memory photo cache in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/photos.ts`.
+  - Kept `invalidatePhotosCache` as compatibility no-op.
+  - Verified lint passes.
+- Troubleshooting:
+  - Issue: newly uploaded item (`sushi`) was in DB/Storage but not visible in feed.
+  - Cause: module-level cache prevented fresh Supabase reads.
+  - Fix: always fetch from Supabase per request (cache removed).
+- Tech stack/tools used:
+  - Next.js server module behavior
+  - Supabase read path
+  - ESLint
+- Usage notes/commands:
+  - `npm run lint`
+- Next action:
+  - hard refresh localhost and verify new uploads appear immediately.

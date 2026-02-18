@@ -59,3 +59,22 @@ This command:
 
 - uploads files referenced by `public.photos.storage_path` to `photos` bucket
 - rewrites `public.photos.src` to Supabase public URL
+
+## 6) EXIF Metadata Reference (Documented Only, Not Implemented)
+
+The following EXIF fields are noted as available from source images and can be considered in a future phase.
+This repository currently does not parse/store/display them in app logic.
+
+- last_used_at (example: `2026-02-18 21:55`)
+- resolution (example: `7728x5152`)
+- make (example: `FUJIFILM`)
+- model (example: `X-E5`)
+- color_space (example: `RGB`)
+- color_profile (example: `sRGB IEC61966-2.1`)
+- focal_length_mm (example: `23`)
+- alpha_channel (example: `false`)
+- red_eye (example: `false`)
+- metering_mode (example: `pattern`)
+- f_number (example: `f/2.8`)
+- exposure_program (example: `aperture priority`)
+- exposure_time (example: `1/140`)
