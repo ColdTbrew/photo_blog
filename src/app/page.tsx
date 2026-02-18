@@ -12,7 +12,7 @@ export default async function Home() {
           Lightlog by Coldbrew
         </h1>
         <p className="mt-3 max-w-2xl text-base text-stone-600">
-          아래로 스크롤할수록 내가 찍은 사진들이 자연스럽게 이어지는 개인 갤러리입니다.
+          사진들로 기억을 남긴 갤러리입니다.
         </p>
       </header>
 

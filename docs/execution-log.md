@@ -341,6 +341,22 @@
 - Next action:
   - Retry upload in browser on latest production deployment and confirm record insert succeeds.
 
+## 2026-02-18 22:49 KST - Home Intro Copy Update
+
+- Goal: Update home intro sentence to the new Korean copy requested by user.
+- Steps taken:
+  - Changed intro text in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/page.tsx`.
+  - Replaced sentence with: `사진들로 기억을 남긴 갤러리입니다.`
+- Troubleshooting:
+  - Troubleshooting: none.
+- Tech stack/tools used:
+  - Next.js App Router
+  - TypeScript/TSX text update
+- Usage notes/commands:
+  - Verify locally: `npm run dev` then open `/`
+- Next action:
+  - Commit and push copy update to trigger Vercel auto deployment.
+
 ## 2026-02-18 - Production Deploy via Vercel CLI
 
 - Goal: Deploy latest commit to production.
