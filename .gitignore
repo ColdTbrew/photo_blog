@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Local bootstrap residue
 temp_app/
+
+# Local project skills
+.agents/
