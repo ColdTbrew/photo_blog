@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1600" role="img" aria-label="desert-cloud-silence">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f5f5f4" />
+      <stop offset="100%" stop-color="#d6d3d1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="1600" fill="url(#bg)" />
+  <circle cx="220" cy="280" r="180" fill="#a8a29e" opacity="0.32" />
+  <rect x="500" y="560" width="560" height="700" rx="44" fill="#78716c" opacity="0.26" />
+  <text x="80" y="1470" font-size="64" fill="#44403c" font-family="Helvetica, Arial, sans-serif">desert-cloud-silence</text>
+</svg>

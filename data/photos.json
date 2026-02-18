@@ -1,0 +1,194 @@
+[
+  {
+    "id": "p_020",
+    "slug": "golden-gate-main-span",
+    "src": "/photos/IMG_7804.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "골든게이트 브리지",
+    "caption": "구름 사이 빛을 받은 붉은 타워와 잔잔한 바다.",
+    "tags": [
+      "san-francisco",
+      "golden-gate",
+      "bridge"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T17:11:22.468Z"
+  },
+  {
+    "id": "p_028",
+    "slug": "garden-light-near-bay",
+    "src": "/photos/IMG_7820.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "꽃이 핀 공원 산책로",
+    "caption": "분홍빛 꽃과 큰 나무가 프레임을 채운 따뜻한 오후.",
+    "tags": [
+      "san-francisco",
+      "park",
+      "flowers"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T17:11:07.396Z"
+  },
+  {
+    "id": "p_030",
+    "slug": "pink-flowers-waterfront",
+    "src": "/photos/IMG_7826.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "워터프론트의 분홍빛",
+    "caption": "바닷바람 속 꽃길 사이로 두 사람이 사진을 남기던 순간.",
+    "tags": [
+      "san-francisco",
+      "waterfront",
+      "flowers"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T17:10:57.277Z"
+  },
+  {
+    "id": "p_027",
+    "slug": "golden-gate-north-overlook",
+    "src": "/photos/IMG_7819.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "골든게이트 북쪽 전망",
+    "caption": "붉은 교각과 만의 굴곡이 한눈에 들어오는 높은 전망대.",
+    "tags": [
+      "san-francisco",
+      "golden-gate",
+      "landscape"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T17:09:45.582Z"
+  },
+  {
+    "id": "p_021",
+    "slug": "golden-gate-city-view",
+    "src": "/photos/IMG_7806.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "골든게이트와 도시 실루엣",
+    "caption": "언덕길 너머로 샌프란시스코 스카이라인이 옅게 보이던 순간.",
+    "tags": [
+      "san-francisco",
+      "golden-gate",
+      "skyline"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T17:09:29.970Z"
+  },
+  {
+    "id": "p_022",
+    "slug": "pier39-morning-harbor",
+    "src": "/photos/IMG_7807.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "피어39의 오전",
+    "caption": "잔잔한 항구와 대관람차가 만든 밝은 해안 풍경.",
+    "tags": [
+      "san-francisco",
+      "pier39",
+      "harbor"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T17:08:13.898Z"
+  },
+  {
+    "id": "p_025",
+    "slug": "ferry-building-clocktower",
+    "src": "/photos/IMG_7814.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "페리 빌딩 시계탑",
+    "caption": "파란 하늘과 아치 지붕 위로 솟은 시계탑.",
+    "tags": [
+      "san-francisco",
+      "ferry-building",
+      "architecture"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T17:07:36.648Z"
+  },
+  {
+    "id": "p_026",
+    "slug": "golden-gate-cargo-ship",
+    "src": "/photos/IMG_7815.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "케이블 너머 컨테이너선",
+    "caption": "다리 케이블 사이로 컨테이너선이 천천히 지나가던 바다.",
+    "tags": [
+      "san-francisco",
+      "golden-gate",
+      "ship"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T17:06:47.572Z"
+  },
+  {
+    "id": "p_023",
+    "slug": "fishermans-wharf-boardwalk",
+    "src": "/photos/IMG_7811.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "피셔맨스 워프 골목",
+    "caption": "나무 데크 골목을 따라 관광객들이 지나가던 한낮.",
+    "tags": [
+      "san-francisco",
+      "fishermans-wharf",
+      "street"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T16:39:26.865Z"
+  },
+  {
+    "id": "p_019",
+    "slug": "bay-bridge-ferry-dock",
+    "src": "/photos/IMG_7800.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "베이 브리지와 페리",
+    "caption": "선착장에 멈춘 페리 뒤로 베이 브리지가 길게 이어진 오후.",
+    "tags": [
+      "san-francisco",
+      "bay-bridge",
+      "ferry"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T16:39:21.347Z"
+  },
+  {
+    "id": "p_029",
+    "slug": "runner-and-ups-truck",
+    "src": "/photos/IMG_7824.JPG",
+    "width": 3089,
+    "height": 2048,
+    "title": "가을 거리의 스냅",
+    "caption": "UPS 트럭 앞을 스쳐 가는 러너가 남긴 속도감.",
+    "tags": [
+      "san-francisco",
+      "street",
+      "snapshot"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T14:53:20.064Z"
+  },
+  {
+    "id": "p_024",
+    "slug": "transamerica-streetline",
+    "src": "/photos/IMG_7812.JPG",
+    "width": 2047,
+    "height": 3088,
+    "title": "트랜스아메리카 아래 도로",
+    "caption": "맑은 하늘 아래 뾰족한 타워와 흰 차가 교차한 장면.",
+    "tags": [
+      "san-francisco",
+      "transamerica",
+      "city"
+    ],
+    "takenAt": "2026-01-31",
+    "createdAt": "2026-01-31T12:07:45.497Z"
+  }
+]
