@@ -14,7 +14,7 @@ type PhotoRow = {
   title: string;
   caption: string;
   tags: string[];
-  taken_at: string;
+  taken_at: string | null;
   created_at: string;
 };
 

@@ -34,6 +34,11 @@ type ExifFormState = {
   exposureTime: string;
 };
 
+type ExtractedMetadata = {
+  exif: ExifFormState;
+  takenAt: string;
+};
+
 const EMPTY_EXIF: ExifFormState = {
   lastUsedAt: "",
   make: "",
@@ -188,6 +193,43 @@ async function extractExifFormState(file: File): Promise<ExifFormState> {
   }
 }
 
+function toDateInputValue(value: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+}
+
+function parseExifDate(value: unknown): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return toDateInputValue(value);
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return toDateInputValue(parsed);
+    }
+  }
+  return "";
+}
+
+async function extractMetadata(file: File): Promise<ExtractedMetadata> {
+  const exif = await extractExifFormState(file);
+  let takenAt = "";
+
+  try {
+    const exifr = await import("exifr");
+    const parsed = (await exifr.parse(file, true)) as Record<string, unknown> | null;
+    if (parsed) {
+      takenAt = parseExifDate(
+        firstDefined(parsed.DateTimeOriginal, parsed.CreateDate, parsed.ModifyDate)
+      );
+    }
+  } catch {
+    // noop
+  }
+
+  return { exif, takenAt };
+}
+
 export default function AdminUploadPage() {
   const [token, setToken] = useState("");
   const [title, setTitle] = useState("");
@@ -195,6 +237,7 @@ export default function AdminUploadPage() {
   const [caption, setCaption] = useState("");
   const [tags, setTags] = useState("");
   const [takenAt, setTakenAt] = useState("");
+  const [takenAtNone, setTakenAtNone] = useState(false);
   const [width, setWidth] = useState("");
   const [height, setHeight] = useState("");
   const [exif, setExif] = useState<ExifFormState>(EMPTY_EXIF);
@@ -223,8 +266,11 @@ export default function AdminUploadPage() {
       // noop
     }
 
-    const extractedExif = await extractExifFormState(nextFile);
-    setExif(extractedExif);
+    const extracted = await extractMetadata(nextFile);
+    setExif(extracted.exif);
+    if (!takenAtNone) {
+      setTakenAt((prev) => prev || extracted.takenAt);
+    }
   };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -243,7 +289,7 @@ export default function AdminUploadPage() {
       formData.set("slug", slug || suggestedSlug);
       formData.set("caption", caption);
       formData.set("tags", tags);
-      formData.set("takenAt", takenAt);
+      formData.set("takenAt", takenAtNone ? "none" : takenAt);
       formData.set("width", width);
       formData.set("height", height);
       formData.set("exifLastUsedAt", exif.lastUsedAt);
@@ -276,6 +322,7 @@ export default function AdminUploadPage() {
       setCaption("");
       setTags("");
       setTakenAt("");
+      setTakenAtNone(false);
       setWidth("");
       setHeight("");
       setExif(EMPTY_EXIF);
@@ -334,10 +381,10 @@ export default function AdminUploadPage() {
             <span className="mb-1 block text-sm font-medium text-stone-700">Slug</span>
             <input
               value={slug}
-              onChange={(e) => setSlug(slugify(e.target.value))}
+              onChange={(e) => setSlug(e.target.value)}
+              onBlur={() => setSlug((prev) => slugify(prev))}
               placeholder={suggestedSlug || "auto-from-title"}
               className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none ring-stone-900 focus:ring"
-              required
             />
           </label>
         </div>
@@ -360,9 +407,23 @@ export default function AdminUploadPage() {
               type="date"
               value={takenAt}
               onChange={(e) => setTakenAt(e.target.value)}
+              disabled={takenAtNone}
               className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none ring-stone-900 focus:ring"
-              required
             />
+            <label className="mt-2 inline-flex items-center gap-2 text-xs text-stone-600">
+              <input
+                type="checkbox"
+                checked={takenAtNone}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setTakenAtNone(checked);
+                  if (checked) {
+                    setTakenAt("");
+                  }
+                }}
+              />
+              Taken At 없음 (none)
+            </label>
           </label>
 
           <label className="block">

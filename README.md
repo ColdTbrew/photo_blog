@@ -62,13 +62,14 @@ npm run dev
 실행 순서:
 
 1. Supabase SQL Editor에서 `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0001_create_photos.sql` 실행
-2. (초기 1회) 메타데이터 import (`data/photos.json`이 있을 때):
+2. Supabase SQL Editor에서 `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql` 실행 (EXIF 컬럼)
+3. (초기 1회) 메타데이터 import (`data/photos.json`이 있을 때):
 
 ```bash
 npm run supabase:import:photos
 ```
 
-3. 스토리지 업로드 + DB `src` URL 동기화:
+4. 스토리지 업로드 + DB `src` URL 동기화:
 
 ```bash
 npm run supabase:sync:storage
@@ -81,6 +82,7 @@ npm run supabase:sync:storage
   - 이미지 파일 업로드
   - `photos` 버킷 저장
   - `public.photos` 레코드 자동 생성
+  - EXIF 자동 추출(가능한 항목) + 수동 수정 입력 후 저장
 - 보안:
   - 폼의 Admin Token 값이 서버 환경변수 `ADMIN_UPLOAD_TOKEN`과 일치해야 업로드 허용
 

@@ -56,7 +56,9 @@ export function PhotoDetailShell({ photo }: Props) {
 
         <div className="space-y-4 p-6 sm:p-8">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{photo.takenAt}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-stone-500">
+              {photo.takenAt ?? "unknown date"}
+            </p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
               {photo.title}
             </h1>

@@ -17,6 +17,7 @@ Optional compatibility alias for scripts:
 Run SQL in Supabase SQL Editor:
 
 - `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0001_create_photos.sql`
+- `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql` (EXIF columns)
 
 This creates:
 
@@ -60,10 +61,10 @@ This command:
 - uploads files referenced by `public.photos.storage_path` to `photos` bucket
 - rewrites `public.photos.src` to Supabase public URL
 
-## 6) EXIF Metadata Reference (Documented Only, Not Implemented)
+## 6) EXIF Metadata on Admin Upload (Implemented)
 
-The following EXIF fields are noted as available from source images and can be considered in a future phase.
-This repository currently does not parse/store/display them in app logic.
+On `/admin/upload`, EXIF values are auto-filled when available and all fields are editable.
+If EXIF is missing (for example film scans), fields stay empty and can be manually entered.
 
 - last_used_at (example: `2026-02-18 21:55`)
 - resolution (example: `7728x5152`)

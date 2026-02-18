@@ -292,3 +292,151 @@
   - `npm run lint`
 - Next action:
   - hard refresh localhost and verify new uploads appear immediately.
+
+## 2026-02-18 22:14 KST - EXIF Auto-fill + Editable Upload Metadata
+
+- Goal: Save EXIF metadata automatically during admin upload while allowing full manual edits for missing EXIF cases (for example film camera scans).
+- Steps taken:
+  - Added DB migration `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql`.
+  - Extended upload API `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts` to accept optional EXIF form fields and persist nullable values.
+  - Extended admin upload UI `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx` with EXIF form section.
+  - Added EXIF auto extraction from selected file using `exifr`, with editable inputs for all EXIF fields.
+  - Added dependency `exifr` to project dependencies.
+  - Updated runbook/docs in `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/supabase-phase1.md` and `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`.
+- Troubleshooting:
+  - Troubleshooting: none.
+- Tech stack/tools used:
+  - Next.js App Router (client page + route handler)
+  - Supabase Postgres
+  - `exifr` (browser-side EXIF parsing)
+  - ESLint
+- Usage notes/commands:
+  - Apply SQL: `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql`
+  - Run lint: `npm run lint`
+  - Upload UI: `/admin/upload`
+- Next action:
+  - Apply migration `0002` in Supabase SQL Editor, then verify EXIF fields are inserted/nullable as expected on new uploads.
+
+## 2026-02-18 22:20 KST - Vercel Admin Token Mismatch Fix
+
+- Goal: Resolve `Unauthorized` on production admin upload despite local token input.
+- Steps taken:
+  - Verified Vercel env entries existed for `ADMIN_UPLOAD_TOKEN`.
+  - Reproduced mismatch with protected API check via `vercel curl` and confirmed `Unauthorized` when posting local token.
+  - Re-synced `ADMIN_UPLOAD_TOKEN` in Vercel Development/Preview/Production from local `.env.local`.
+  - Triggered new production deployment and confirmed alias moved to `https://photoblog-two.vercel.app`.
+  - Re-tested API with local token and confirmed response changed to `file is required` (token accepted).
+- Troubleshooting:
+  - Issue: production `/api/admin/photos` returned `Unauthorized`.
+  - Cause: deployed `ADMIN_UPLOAD_TOKEN` value did not match local `.env.local` token.
+  - Fix: replaced Vercel env token values and redeployed production.
+- Tech stack/tools used:
+  - Vercel CLI (`npx vercel env`, `npx vercel --prod`, `npx vercel curl`)
+  - Next.js API route auth check (`ADMIN_UPLOAD_TOKEN`)
+- Usage notes/commands:
+  - `npx vercel env rm ADMIN_UPLOAD_TOKEN <environment> -y`
+  - `printf '%s' \"$ADMIN_UPLOAD_TOKEN\" | npx vercel env add ADMIN_UPLOAD_TOKEN <environment>`
+  - `npx vercel --prod --yes`
+  - `npx vercel curl /api/admin/photos --deployment https://photoblog-two.vercel.app -- --request POST --form \"token=...\"`
+- Next action:
+  - Retry upload in browser on latest production deployment and confirm record insert succeeds.
+
+## 2026-02-18 - Production Deploy via Vercel CLI
+
+- Goal: Deploy latest commit to production.
+- Steps taken:
+  - Ran `npx vercel --prod --yes`.
+  - First deploy failed during Next.js prerender due to missing Supabase public env vars in Vercel production.
+  - Added production env vars:
+    - `NEXT_PUBLIC_SUPABASE_URL`
+    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+    - `SUPABASE_SERVICE_ROLE_KEY`
+  - Re-ran `npx vercel --prod --yes`.
+  - Deployment succeeded and alias connected.
+- Troubleshooting:
+  - Issue: build error on `/` with message about missing Supabase read env vars.
+  - Cause: Vercel production had only `ADMIN_UPLOAD_TOKEN` configured.
+  - Fix: synced missing Supabase env vars to production and redeployed.
+- Tech stack/tools used:
+  - Vercel CLI (`npx vercel`)
+  - Next.js build logs
+- Usage notes/commands:
+  - `npx vercel env add <NAME> production`
+  - `npx vercel --prod --yes`
+- Next action:
+  - Verify production feed/admin upload behavior at the aliased domain.
+
+## 2026-02-18 - EXIF Change Verification + Production Redeploy
+
+- Goal: Review EXIF-related changes and redeploy production.
+- Steps taken:
+  - Scanned repository for EXIF changes (admin UI/API, docs, migration `0002`).
+  - Verified local build and lint pass.
+  - Checked Supabase schema compatibility by selecting EXIF columns.
+  - Redeployed production using `npx vercel --prod --yes` and confirmed alias update.
+- Troubleshooting:
+  - Issue: DB query returned `column photos.exif_make does not exist`.
+  - Cause: migration `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql` not applied yet.
+  - Fix: pending manual SQL apply in Supabase SQL Editor.
+- Tech stack/tools used:
+  - Vercel CLI
+  - Supabase JS client schema check
+  - Next.js build pipeline
+- Usage notes/commands:
+  - `npm run lint`
+  - `npm run build`
+  - `npx vercel --prod --yes`
+- Next action:
+  - Apply migration `0002_add_photo_exif_columns.sql` in Supabase, then test admin upload EXIF save.
+
+## 2026-02-18 - Supabase CLI Migration Apply (0002)
+
+- Goal: Apply EXIF schema migration via Supabase CLI.
+- Steps taken:
+  - Logged in with `npx supabase login` (user completed auth).
+  - Linked project: `npx supabase link --project-ref czecclgcdhfgqzqsdbgj`.
+  - Applied migrations: `npx supabase db push`.
+  - Re-verified EXIF columns by selecting `exif_make`, `exif_model`, `exif_f_number` via Supabase JS.
+- Troubleshooting:
+  - Issue: initial EXIF column check still failed.
+  - Cause: check command ran in parallel with migration apply.
+  - Fix: reran check sequentially after push completion.
+- Tech stack/tools used:
+  - Supabase CLI (`npx supabase`)
+  - Supabase JS verification query
+- Usage notes/commands:
+  - `npx supabase link --project-ref czecclgcdhfgqzqsdbgj`
+  - `npx supabase db push`
+- Next action:
+  - Test `/admin/upload` with EXIF-populated image and verify saved EXIF values in DB.
+
+## 2026-02-18 - Admin Upload UX Fix (Slug + TakenAt Optional)
+
+- Goal: Fix admin upload usability issues (slug input friction, takenAt required friction).
+- Steps taken:
+  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx`:
+    - slug field no longer required
+    - slug is sanitized on blur/submit instead of every keystroke
+    - takenAt is auto-filled from EXIF date when available
+    - added `Taken At 없음 (none)` checkbox
+  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts`:
+    - slug auto-generation when empty
+    - `takenAt` optional parsing (`none` or empty -> null)
+    - required fields reduced to title/caption
+  - Added DB migration `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0003_make_taken_at_nullable.sql`.
+  - Applied migration with `npx supabase db push`.
+  - Updated photo type to allow nullable takenAt and fallback rendering in detail view.
+  - Redeployed production with `npx vercel --prod --yes`.
+- Troubleshooting:
+  - Issue: `taken_at` previously required by schema.
+  - Cause: `public.photos.taken_at` had `NOT NULL` constraint from initial schema.
+  - Fix: migration 0003 dropped not-null constraint.
+- Tech stack/tools used:
+  - Next.js App Router
+  - Supabase Postgres + CLI
+  - Vercel CLI
+- Usage notes/commands:
+  - `npx supabase db push`
+  - `npx vercel --prod --yes`
+- Next action:
+  - Validate `/admin/upload` with both cases: EXIF date present and `Taken At 없음` checked.

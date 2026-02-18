@@ -7,7 +7,7 @@ export type Photo = {
   title: string;
   caption: string;
   tags: string[];
-  takenAt: string;
+  takenAt: string | null;
   createdAt: string;
 };
 

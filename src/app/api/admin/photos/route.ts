@@ -16,6 +16,16 @@ function sanitizeFileBaseName(name: string): string {
   return name.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-").toLowerCase();
 }
 
+function toSlug(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function parseTags(raw: string): string[] {
   return raw
     .split(",")
@@ -81,6 +91,20 @@ function parseOptionalDateTime(raw: string, name: string): string | null {
   return parsed.toISOString();
 }
 
+function parseOptionalDate(raw: string, name: string): string | null {
+  const value = raw.trim().toLowerCase();
+  if (!value || value === "none") {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`${name} is not a valid date`);
+  }
+
+  return parsed.toISOString().slice(0, 10);
+}
+
 export async function POST(request: Request) {
   try {
     const adminToken = getRequiredEnv("ADMIN_UPLOAD_TOKEN");
@@ -98,13 +122,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "file is required" }, { status: 400 });
     }
 
-    const slug = String(formData.get("slug") ?? "").trim();
+    const slugRaw = String(formData.get("slug") ?? "").trim();
     const title = String(formData.get("title") ?? "").trim();
     const caption = String(formData.get("caption") ?? "").trim();
     const tagsRaw = String(formData.get("tags") ?? "");
     const widthRaw = String(formData.get("width") ?? "").trim();
     const heightRaw = String(formData.get("height") ?? "").trim();
-    const takenAt = String(formData.get("takenAt") ?? "").trim();
+    const takenAtRaw = String(formData.get("takenAt") ?? "").trim();
     const exifLastUsedAtRaw = String(formData.get("exifLastUsedAt") ?? "");
     const exifMakeRaw = String(formData.get("exifMake") ?? "");
     const exifModelRaw = String(formData.get("exifModel") ?? "");
@@ -118,9 +142,9 @@ export async function POST(request: Request) {
     const exifExposureProgramRaw = String(formData.get("exifExposureProgram") ?? "");
     const exifExposureTimeRaw = String(formData.get("exifExposureTime") ?? "");
 
-    if (!slug || !title || !caption || !takenAt) {
+    if (!title || !caption) {
       return NextResponse.json(
-        { error: "slug, title, caption, takenAt are required" },
+        { error: "title and caption are required" },
         { status: 400 }
       );
     }
@@ -140,6 +164,8 @@ export async function POST(request: Request) {
     const exifFNumber = parseOptionalNumber(exifFNumberRaw, "exifFNumber");
     const exifExposureProgram = parseOptionalText(exifExposureProgramRaw);
     const exifExposureTime = parseOptionalText(exifExposureTimeRaw);
+    const takenAt = parseOptionalDate(takenAtRaw, "takenAt");
+    const slug = toSlug(slugRaw || title || file.name.replace(/\.[^.]+$/, "")) || `photo-${Date.now()}`;
 
     const extension = file.name.includes(".") ? file.name.split(".").pop() ?? "jpg" : "jpg";
     const normalizedExtension = extension.toLowerCase();
