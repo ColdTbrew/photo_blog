@@ -57,7 +57,8 @@ npm run dev
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `ADMIN_UPLOAD_TOKEN` (관리자 업로드 API 보호용)
+- `ADMIN_ALLOWED_EMAILS` (쉼표 구분 관리자 이메일 allowlist, 예: `admin@site.com,owner@site.com`)
+- `ADMIN_UPLOAD_TOKEN` (선택: 레거시 토큰 fallback)
 
 실행 순서:
 
@@ -86,7 +87,21 @@ npm run supabase:sync:storage
   - 기준 미달 이미지는 자동 업스케일 후 WebP로 저장
   - EXIF 자동 추출(가능한 항목) + 수동 수정 입력 후 저장
 - 보안:
-  - 폼의 Admin Token 값이 서버 환경변수 `ADMIN_UPLOAD_TOKEN`과 일치해야 업로드 허용
+  - Supabase Auth 로그인 후 업로드 가능
+  - API는 Bearer access token 검증 + `ADMIN_ALLOWED_EMAILS` allowlist 검사
+  - `ADMIN_UPLOAD_TOKEN`이 설정된 경우 기존 토큰 방식도 fallback으로 허용(점진 이관용)
+
+### Admin Upload - GitHub OAuth 설정
+
+1. Supabase `Authentication > Providers > GitHub`를 활성화한다.
+2. GitHub `Settings > Developer settings > OAuth Apps`에서 OAuth App을 만든다.
+3. GitHub OAuth App의 Callback URL을 다음으로 설정한다:
+   - `https://<SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback`
+4. GitHub에서 발급된 `Client ID`, `Client Secret`을 Supabase GitHub Provider에 입력한다.
+5. Supabase `Authentication > URL Configuration`에 redirect URL을 추가한다:
+   - 로컬: `http://localhost:3000/admin/upload`
+   - 프로덕션: `https://<your-domain>/admin/upload`
+6. 프로젝트 환경변수 `ADMIN_ALLOWED_EMAILS`에 업로드를 허용할 GitHub 계정 이메일을 등록한다.
 
 ## Image Policy
 
@@ -122,9 +137,9 @@ npx vercel env ls
 환경변수 추가:
 
 ```bash
-printf '%s\n' "$ADMIN_UPLOAD_TOKEN" | npx vercel env add ADMIN_UPLOAD_TOKEN development
-printf '%s\n' "$ADMIN_UPLOAD_TOKEN" | npx vercel env add ADMIN_UPLOAD_TOKEN preview
-printf '%s\n' "$ADMIN_UPLOAD_TOKEN" | npx vercel env add ADMIN_UPLOAD_TOKEN production
+printf '%s\n' "$ADMIN_ALLOWED_EMAILS" | npx vercel env add ADMIN_ALLOWED_EMAILS development
+printf '%s\n' "$ADMIN_ALLOWED_EMAILS" | npx vercel env add ADMIN_ALLOWED_EMAILS preview
+printf '%s\n' "$ADMIN_ALLOWED_EMAILS" | npx vercel env add ADMIN_ALLOWED_EMAILS production
 ```
 
 배포:

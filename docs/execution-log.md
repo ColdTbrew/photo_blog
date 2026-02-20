@@ -596,3 +596,207 @@
   - `perl -0pi -e '...replace...' docs/execution-log.md`
 - 다음 액션:
   - 이후 신규 로그는 한글로만 작성한다.
+
+## 2026-02-20 23:02 KST - 글로벌 룰에 tmux 멀티 에이전트 스플릿 전략 추가
+
+- 일시:
+  - 2026-02-20 23:02:01 KST
+- 목표:
+  - 멀티 에이전트 작업 시 `tmux` 분할 전략을 글로벌 룰로 명시해 실행 표준을 통일한다.
+- 수행 단계:
+  - 루트 글로벌 룰 파일 `AGENTS.md`를 확인했다.
+  - `Global Workflow Rule (tmux Split for Multi-Agent)` 섹션을 추가했다.
+  - 기본 3-pane 역할(Orchestrator / Explorer / Worker), 파일 소유 분리, 최종 통합 검증 규칙을 문서화했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Markdown 문서 편집
+  - Shell: `cat`, `rg`, `date`
+  - `apply_patch`
+- 사용 메모/명령어:
+  - `date '+%Y-%m-%d %H:%M:%S %Z'`
+  - `cat AGENTS.md`
+- 다음 액션:
+  - 실제 멀티 에이전트 세션 시작 시 `tmux` 3-pane 레이아웃을 기본 템플릿으로 사용한다.
+
+## 2026-02-20 23:08 KST - 관리자 업로드 인증을 Supabase Auth 기반으로 전환
+
+- 일시:
+  - 2026-02-20 23:08:13 KST
+- 목표:
+  - `/admin/upload` 업로드 기능에 로그인 기반 인증을 적용하고, 서버에서 관리자 권한을 이메일 allowlist로 검증한다.
+- 수행 단계:
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts` 인증 로직을 확장했다.
+  - 기존 `ADMIN_UPLOAD_TOKEN` 검증은 레거시 fallback으로 유지하고, 기본 인증 경로를 Bearer access token + Supabase `auth.getUser()` 검증으로 추가했다.
+  - `ADMIN_ALLOWED_EMAILS`(쉼표 구분) allowlist를 도입해 로그인 사용자 이메일을 서버에서 최종 검증하도록 반영했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx`에 Supabase 로그인/로그아웃 UI를 추가했다.
+  - 로그인 성공 시 세션 access token을 `/api/admin/photos` 요청 `Authorization: Bearer ...` 헤더로 전달하도록 변경했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/.env.example`와 `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`를 새 인증 흐름 기준으로 업데이트했다.
+  - 정적 검증으로 `npm run lint`를 실행했다.
+- 트러블슈팅:
+  - 이슈: `npm run build` 시 Google Fonts(Geist) 네트워크 fetch 실패로 빌드 에러 발생.
+  - 원인: 현재 실행 환경의 외부 네트워크 제한으로 `fonts.googleapis.com` 접근 불가.
+  - 조치: 코드 변경 유효성은 `npm run lint`로 확인했고, 빌드는 네트워크 가능한 환경에서 재검증 필요.
+- 사용 기술/도구:
+  - Next.js App Router
+  - Supabase Auth (`@supabase/supabase-js`)
+  - ESLint
+  - Markdown 문서 편집
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `npm run build`
+  - `rg -n "ADMIN_UPLOAD_TOKEN|ADMIN_ALLOWED_EMAILS|Authorization" src README.md .env.example`
+- 다음 액션:
+  - Supabase Auth에 관리자 계정을 생성하고 `ADMIN_ALLOWED_EMAILS`를 배포 환경에 설정한 뒤 `/admin/upload` 로그인/업로드를 실환경에서 검증한다.
+
+## 2026-02-21 00:09 KST - 관리자 로그인 방식을 GitHub OAuth로 전환
+
+- 일시:
+  - 2026-02-21 00:09:49 KST
+- 목표:
+  - `/admin/upload`에서 이메일/비밀번호 대신 GitHub OAuth 로그인으로 관리자 인증을 수행하도록 전환한다.
+- 수행 단계:
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx`의 인증 UI를 GitHub OAuth 버튼 기반으로 변경했다.
+  - `signInWithPassword` 호출을 제거하고 `signInWithOAuth({ provider: "github" })`를 적용했다.
+  - OAuth redirect 경로를 `/admin/upload`로 고정하고, 로그인 상태/오류/진행 메시지를 UI에 반영했다.
+  - 업로드 API의 Bearer 토큰 검증 + `ADMIN_ALLOWED_EMAILS` 서버 검증 흐름은 유지했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`에 GitHub OAuth 설정 가이드를 추가했다.
+  - 정적 검증으로 `npm run lint`를 실행해 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Supabase Auth OAuth
+  - Next.js App Router client page
+  - ESLint
+  - Markdown 문서 편집
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `date '+%Y-%m-%d %H:%M:%S %Z'`
+- 다음 액션:
+  - Supabase/GitHub OAuth provider 설정을 완료하고 실제 관리자 GitHub 계정으로 `/admin/upload` 로그인/업로드를 검증한다.
+
+## 2026-02-21 00:20 KST - 관리자 이메일 allowlist 등록
+
+- 일시:
+  - 2026-02-21 00:20:34 KST
+- 목표:
+  - GitHub OAuth 인증 후 업로드 권한 검증을 위해 관리자 이메일을 `ADMIN_ALLOWED_EMAILS`에 등록한다.
+- 수행 단계:
+  - 로컬 환경변수 파일 `/Users/coldbrew/Documents/photo_blog/photo_blog/.env.local`에 `ADMIN_ALLOWED_EMAILS` 키 존재 여부를 확인했다.
+  - `ADMIN_ALLOWED_EMAILS=shchoi8687@hotmail.com` 값을 추가(또는 동일 키 업데이트)했다.
+  - `rg`로 최종 등록 라인을 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Shell (`rg`, `sed`, `printf`)
+  - `.env.local` 환경변수 관리
+- 사용 메모/명령어:
+  - `rg -n "^ADMIN_ALLOWED_EMAILS=" .env.local`
+  - `sed -i '' 's/^ADMIN_ALLOWED_EMAILS=.*/ADMIN_ALLOWED_EMAILS=shchoi8687@hotmail.com/' .env.local`
+- 다음 액션:
+  - `/admin/upload`에서 GitHub 로그인 후 업로드 API가 403 없이 통과되는지 확인한다.
+
+## 2026-02-21 00:21 KST - Vercel 환경변수 ADMIN_ALLOWED_EMAILS 반영
+
+- 일시:
+  - 2026-02-21 00:21:40 KST
+- 목표:
+  - GitHub OAuth 관리자 업로드 권한 검증이 배포 환경에서도 동작하도록 `ADMIN_ALLOWED_EMAILS`를 Vercel 모든 환경에 반영한다.
+- 수행 단계:
+  - `ADMIN_ALLOWED_EMAILS=shchoi8687@hotmail.com` 값을 Vercel `development`, `preview`, `production`에 추가했다.
+  - `npx vercel env ls`로 3개 환경 모두 `ADMIN_ALLOWED_EMAILS`가 등록된 것을 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Vercel CLI (`npx vercel`)
+  - Shell loop + stdin 파이프 입력
+- 사용 메모/명령어:
+  - `printf '%s\n' "$ADMIN_ALLOWED_EMAILS" | npx vercel env add ADMIN_ALLOWED_EMAILS development`
+  - `printf '%s\n' "$ADMIN_ALLOWED_EMAILS" | npx vercel env add ADMIN_ALLOWED_EMAILS preview`
+  - `printf '%s\n' "$ADMIN_ALLOWED_EMAILS" | npx vercel env add ADMIN_ALLOWED_EMAILS production`
+  - `npx vercel env ls`
+- 다음 액션:
+  - 프로덕션 배포 후 `/admin/upload`에서 GitHub 로그인 및 업로드 성공(401/403 없음)을 확인한다.
+
+## 2026-02-21 00:25 KST - GitHub OAuth 로그인 화면 증빙 이미지 추가
+
+- 일시:
+  - 2026-02-21 00:25:16 KST
+- 목표:
+  - GitHub OAuth 로그인 UI 반영 상태를 기록용 이미지로 저장하고 Git 추적 대상에 포함한다.
+- 수행 단계:
+  - GitHub OAuth 로그인 UI 스크린샷을 프로젝트 내부 증빙 폴더로 복사했다.
+  - 저장 경로를 `docs/evidence/admin-upload-github-login.png`로 고정했다.
+  - 파일 존재 및 크기를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Shell (`cp`, `ls`, `mkdir`, `date`)
+  - Git 추적 대상 파일 관리
+- 사용 메모/명령어:
+  - `mkdir -p docs/evidence`
+  - `cp "<source-screenshot>" "docs/evidence/admin-upload-github-login.png"`
+  - `ls -l docs/evidence/admin-upload-github-login.png`
+- 다음 액션:
+  - 커밋 시 `docs/evidence/admin-upload-github-login.png`를 함께 포함해 인증 UI 변경 증빙으로 보관한다.
+
+## 2026-02-21 00:27 KST - GitHub OAuth 실행결과 스크린샷 추가 + 로그 경로 표기 정리
+
+- 일시:
+  - 2026-02-21 00:27:10 KST
+- 목표:
+  - GitHub OAuth 실행결과 화면을 추가 증빙으로 등록하고, 로그에 개인 로컬 절대경로를 남기지 않도록 정리한다.
+- 수행 단계:
+  - 실행결과 스크린샷을 `docs/evidence/admin-upload-github-login-result.png`로 추가했다.
+  - `AGENTS.md`에 실행 로그는 리포 상대경로만 기록하도록 규칙을 추가했다.
+  - 직전 로그(00:25 KST)에서 개인 로컬 절대경로 표기를 상대경로 중심으로 수정했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Shell (`cp`, `ls`, `date`)
+  - Markdown 문서 편집 (`apply_patch`)
+- 사용 메모/명령어:
+  - `cp "<source-screenshot>" "docs/evidence/admin-upload-github-login-result.png"`
+  - `ls -l docs/evidence/admin-upload-github-login-result.png`
+- 다음 액션:
+  - 이후 실행 로그에는 민감한 개인 경로 없이 리포 상대경로만 사용한다.
+
+## 2026-02-20 23:25 KST - Delta Install + Git/Lazygit Integration
+
+- Goal: Install `delta` and apply it as the default diff pager for both Git and Lazygit.
+- Steps taken:
+  - Checked current tools: `delta` was missing, `lazygit` was already installed.
+  - Installed `git-delta` via Homebrew.
+  - Applied global Git settings for delta pager and improved diff/merge UX.
+  - Created Lazygit config and wired pager to `delta --paging=never`.
+  - Verified final config files and values.
+- Troubleshooting: none
+- Tech stack/tools used:
+  - Homebrew
+  - Git (`git config --global`)
+  - Lazygit (`~/.config/lazygit/config.yml`)
+  - Shell: `which`, `sed`, `cat`, `mkdir`
+- Usage notes or commands:
+  - Install: `brew install git-delta`
+  - Verify: `delta --version`
+  - Git config file: `~/.gitconfig`
+  - Lazygit config file: `~/.config/lazygit/config.yml`
+- Next action:
+  - Open any repo and run `git diff` / `lazygit` to confirm color theme and pager behavior; optionally tune delta theme with `git config --global delta.syntax-theme <theme>`.
+
+## 2026-02-20 23:36 KST - Delta Theme Mode Clarification + Auto Detect Setup
+
+- Goal: Configure delta with non-side-by-side diff and clarify dark/light theme behavior.
+- Steps taken:
+  - Verified available syntax themes via `delta --list-syntax-themes`.
+  - Tested whether delta feature sections with `light=true` / `dark=true` can auto-switch syntax themes.
+  - Confirmed conditional per-mode `syntax-theme` switching is not applied as expected in a single static config.
+  - Applied stable global config: `detect-dark-light=auto`, `features=line-numbers`, `syntax-theme=Nord` (dark default).
+- Troubleshooting:
+  - Issue: Theme appeared fixed and user expected dark/light-specific automatic theme mapping.
+  - Cause: `syntax-theme` is a single active value in current config flow; feature flags did not conditionally switch it.
+  - Fix: Set reliable defaults and provided explicit mode-switch commands for light/dark theme changes.
+- Tech stack/tools used:
+  - git-delta CLI
+  - Git global config
+  - Shell: `rg`, `sed`, `mktemp`
+- Usage notes or commands:
+  - Dark profile: `git config --global delta.syntax-theme Nord`
+  - Light profile: `git config --global delta.syntax-theme GitHub`
+  - Auto terminal mode detection: `git config --global delta.detect-dark-light auto`
+- Next action:
+  - If desired, add shell aliases/functions (`delta-dark`, `delta-light`) for one-command switching.

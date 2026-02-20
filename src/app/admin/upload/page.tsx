@@ -1,12 +1,17 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { createClient, type Session } from "@supabase/supabase-js";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Status =
   | { type: "idle" }
   | { type: "loading" }
   | { type: "error"; message: string }
   | { type: "success"; message: string };
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const SUPABASE_PUBLISHABLE_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 function slugify(input: string): string {
   return input
@@ -231,7 +236,8 @@ async function extractMetadata(file: File): Promise<ExtractedMetadata> {
 }
 
 export default function AdminUploadPage() {
-  const [token, setToken] = useState("");
+  const [authStatus, setAuthStatus] = useState<Status>({ type: "idle" });
+  const [session, setSession] = useState<Session | null>(null);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [caption, setCaption] = useState("");
@@ -244,7 +250,67 @@ export default function AdminUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<Status>({ type: "idle" });
 
+  const supabase = useMemo(() => {
+    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+      return null;
+    }
+    return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  }, []);
+
+  const hasAuthConfig = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
+  const isAuthenticated = Boolean(session?.access_token);
   const suggestedSlug = useMemo(() => slugify(title), [title]);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    void supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  const onSignInWithGitHub = async () => {
+    if (!supabase) {
+      setAuthStatus({
+        type: "error",
+        message: "Supabase 인증 설정이 없습니다. 환경변수를 확인해 주세요.",
+      });
+      return;
+    }
+
+    setAuthStatus({ type: "loading" });
+    const redirectTo = `${window.location.origin}/admin/upload`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo,
+        scopes: "read:user user:email",
+      },
+    });
+    if (error) {
+      setAuthStatus({ type: "error", message: error.message });
+      return;
+    }
+
+    setAuthStatus({ type: "success", message: "GitHub 로그인 페이지로 이동합니다..." });
+  };
+
+  const onSignOut = async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setStatus({ type: "idle" });
+    setAuthStatus({ type: "idle" });
+  };
 
   const onFileChange = async (nextFile: File | null) => {
     setFile(nextFile);
@@ -277,6 +343,11 @@ export default function AdminUploadPage() {
     event.preventDefault();
     setStatus({ type: "loading" });
 
+    if (!isAuthenticated || !session?.access_token) {
+      setStatus({ type: "error", message: "먼저 관리자 계정으로 로그인해 주세요." });
+      return;
+    }
+
     if (!file) {
       setStatus({ type: "error", message: "이미지 파일을 선택해 주세요." });
       return;
@@ -284,7 +355,6 @@ export default function AdminUploadPage() {
 
     try {
       const formData = new FormData();
-      formData.set("token", token);
       formData.set("title", title);
       formData.set("slug", slug || suggestedSlug);
       formData.set("caption", caption);
@@ -308,6 +378,9 @@ export default function AdminUploadPage() {
 
       const response = await fetch("/api/admin/photos", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: formData,
       });
 
@@ -353,23 +426,64 @@ export default function AdminUploadPage() {
         <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Admin</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">Upload Photo</h1>
         <p className="mt-2 text-sm text-stone-600">
-          Supabase Storage + DB 동시 업로드. 토큰은 `ADMIN_UPLOAD_TOKEN`과 일치해야 합니다.
+          Supabase Auth 로그인 + 관리자 이메일 allowlist 검증 후 업로드됩니다.
         </p>
       </header>
 
-      <form onSubmit={onSubmit} className="space-y-5">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-stone-700">Admin Token</span>
-          <input
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none ring-stone-900 focus:ring"
-            required
-          />
-        </label>
+      <div className="space-y-5">
+        {!hasAuthConfig && (
+          <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            `NEXT_PUBLIC_SUPABASE_URL` 또는 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`가 설정되지 않아
+            로그인할 수 없습니다.
+          </p>
+        )}
 
-        <label className="block">
+        <section className="space-y-3 rounded-md border border-stone-200 bg-stone-50 p-4">
+          {isAuthenticated ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-stone-700">
+                로그인됨: <span className="font-medium">{session?.user?.email ?? "unknown user"}</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => void onSignOut()}
+                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
+              >
+                로그아웃
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-stone-700">
+                업로드 전에 GitHub 계정으로 로그인해 주세요.
+              </p>
+              <button
+                type="button"
+                onClick={() => void onSignInWithGitHub()}
+                className="inline-flex items-center justify-center rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-700 disabled:opacity-60"
+                disabled={authStatus.type === "loading" || !hasAuthConfig}
+              >
+                {authStatus.type === "loading" ? "GitHub 로그인 연결 중..." : "GitHub로 로그인"}
+              </button>
+              <p className="text-xs text-stone-500">
+                로그인 후에도 서버는 `ADMIN_ALLOWED_EMAILS` allowlist에 포함된 이메일만 업로드를 허용합니다.
+              </p>
+              {authStatus.type === "error" && (
+                <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {authStatus.message}
+                </p>
+              )}
+              {authStatus.type === "success" && (
+                <p className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  {authStatus.message}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+
+        <form onSubmit={onSubmit} className="space-y-5">
+          <label className="block">
           <span className="mb-1 block text-sm font-medium text-stone-700">Image File</span>
           <input
             type="file"
@@ -618,25 +732,26 @@ export default function AdminUploadPage() {
           </div>
         </section>
 
-        <button
-          type="submit"
-          className="inline-flex items-center justify-center rounded-md bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 disabled:opacity-60"
-          disabled={status.type === "loading"}
-        >
-          {status.type === "loading" ? "Uploading..." : "Upload"}
-        </button>
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center rounded-md bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 disabled:opacity-60"
+            disabled={status.type === "loading" || !isAuthenticated}
+          >
+            {status.type === "loading" ? "Uploading..." : "Upload"}
+          </button>
 
-        {status.type === "error" && (
-          <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {status.message}
-          </p>
-        )}
-        {status.type === "success" && (
-          <p className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            {status.message}
-          </p>
-        )}
-      </form>
+          {status.type === "error" && (
+            <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {status.message}
+            </p>
+          )}
+          {status.type === "success" && (
+            <p className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {status.message}
+            </p>
+          )}
+        </form>
+      </div>
     </main>
   );
 }
