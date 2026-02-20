@@ -852,3 +852,35 @@
 - 다음 액션:
   - 배포 환경에서 `ADMIN_UPLOAD_LEGACY_TOKEN_ENABLED`를 기본 비활성으로 유지하고, 필요 시에만 한시적으로 활성화한다.
   - CI/배포 빌드 검증을 위해 Supabase 환경변수를 설정한 뒤 `npm run build`를 재실행한다.
+
+## 2026-02-21 01:10 KST - PR Preview 배포 실패 원인 분석 및 복구
+
+- 일시:
+  - 2026-02-21 01:10:11 KST
+- 목표:
+  - PR #1의 Vercel Preview 배포 실패 원인을 확인하고 배포 상태를 복구한다.
+- 수행 단계:
+  - `gh` 체크 조회로 실패 체크가 외부 제공자(Vercel)임을 확인했다.
+  - `npx vercel inspect <deployment-url> --logs`로 빌드 로그를 확인해 `/` 프리렌더 시 Supabase 공개 env 누락 에러를 확인했다.
+  - `npx vercel env ls`로 환경변수 매핑 상태를 점검해 Preview 환경에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`가 누락된 것을 확인했다.
+  - 로컬 `.env.local` 값을 사용해 누락된 3개 변수를 Preview 환경에 추가했다.
+  - `npx vercel redeploy <failed-preview-url>`로 동일 커밋을 재배포했다.
+  - `gh pr checks 1`로 PR 체크가 `pass` 상태로 회복된 것을 확인했다.
+- Troubleshooting:
+  - 이슈: PR Preview 배포가 `Error`로 실패.
+  - 원인: Preview 환경 변수 누락으로 `next build` 단계에서 홈 페이지 프리렌더 실패.
+  - 조치: 누락 env를 Preview에 등록 후 재배포하여 해결.
+- 사용 기술/도구:
+  - GitHub CLI (`gh pr checks`)
+  - Vercel CLI (`vercel inspect`, `vercel env`, `vercel redeploy`, `vercel link`)
+  - Shell (`source`, `printf`)
+- 사용 메모/명령어:
+  - `npx vercel inspect https://photoblog-2zwwmysnc-coldbrews-projects-fc2159b4.vercel.app --logs`
+  - `npx vercel env ls`
+  - `printf '%s\n' "$NEXT_PUBLIC_SUPABASE_URL" | npx vercel env add NEXT_PUBLIC_SUPABASE_URL preview`
+  - `printf '%s\n' "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" | npx vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY preview`
+  - `printf '%s\n' "$SUPABASE_SERVICE_ROLE_KEY" | npx vercel env add SUPABASE_SERVICE_ROLE_KEY preview`
+  - `npx vercel redeploy https://photoblog-2zwwmysnc-coldbrews-projects-fc2159b4.vercel.app`
+  - `gh pr checks 1 --repo ColdTbrew/photo_blog`
+- 다음 액션:
+  - Vercel 프로젝트 환경 변수 구성(Production/Preview/Development)을 체크리스트로 문서화해 누락 재발을 방지한다.
