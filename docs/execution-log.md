@@ -885,3 +885,89 @@
   - `npm run build`
 - Next action:
   - lint/build 결과를 확인한 뒤 해당 worktree 브랜치에서 커밋하고 PR 생성 준비를 진행한다.
+
+## 2026-02-21 01:35 KST - ai-upload-metadata 작업 브랜치/worktree 정리
+
+- 일시:
+  - 2026-02-21 01:35:35 KST
+- 목표:
+  - `feat/ai-upload-metadata` 임시 작업 브랜치와 연결 worktree를 정리해 로컬 작업 트리를 단순화한다.
+- 수행 단계:
+  - 현재 worktree 목록과 브랜치 목록을 확인했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog_ai_meta` worktree를 제거했다.
+  - 로컬 브랜치 `feat/ai-upload-metadata`를 삭제했다.
+  - 삭제 후 브랜치/worktree 상태를 재확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Git worktree
+  - Git branch
+- 사용 메모/명령어:
+  - `git worktree list`
+  - `git worktree remove /Users/coldbrew/Documents/photo_blog/photo_blog_ai_meta`
+  - `git branch -D feat/ai-upload-metadata`
+- 다음 액션:
+  - 필요 시 `main` 기준으로 새 기능 브랜치를 다시 생성해 작업을 이어간다.
+
+## 2026-02-21 01:39 KST - Lightlog 아이콘 신규 제작 및 메타데이터 연결
+
+- 일시:
+  - 2026-02-21 01:39:50 KST
+- 목표:
+  - 프로젝트 브랜딩에 맞는 새 탭 아이콘을 적용한다.
+- 수행 단계:
+  - `src/app/icon.svg`를 추가해 Lightlog 콘셉트(빛 + 렌즈)의 신규 아이콘을 제작했다.
+  - `src/app/layout.tsx` `metadata.icons`에 `/icon.svg`를 연결해 favicon/shortcut/apple 아이콘으로 사용되도록 설정했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - SVG 벡터 아이콘 작성
+  - Next.js App Router metadata icons
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 브라우저 강력 새로고침 후 새 탭 아이콘 표시를 확인한다.
+
+## 2026-02-21 01:43 KST - 상단 Upload 버튼 시인성 개선 + favicon.ico 생성
+
+- 일시:
+  - 2026-02-21 01:43:54 KST
+- 목표:
+  - 메인 우측 상단 Upload 버튼의 텍스트 시인성을 높이고, 실제 `.ico` 포맷 favicon 파일을 생성해 연결한다.
+- 수행 단계:
+  - `src/components/admin-auth-actions.tsx`의 Upload 버튼 스타일을 `font-semibold`, `!text-white`, `shadow-sm`로 조정해 명암 대비를 강화했다.
+  - `src/app/icon.svg`를 기반으로 `sharp`로 PNG 렌더 후 `sips` 변환으로 `src/app/favicon.ico`를 생성했다.
+  - `src/app/layout.tsx` `metadata.icons`를 `/favicon.ico` 우선 사용으로 변경했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- 트러블슈팅:
+  - 이슈: `sips`로 SVG에서 직접 ICO 변환이 실패했다(`Cannot extract image from file`).
+  - 원인: 현재 `sips` 실행 환경에서 SVG 입력을 직접 ICO로 추출하지 못했다.
+  - 조치: `sharp`로 PNG(256x256) 중간 산출물을 만든 뒤 `sips`로 ICO 변환해 해결했다.
+- 사용 기술/도구:
+  - Tailwind CSS 클래스 조정
+  - `sharp` (SVG -> PNG)
+  - `sips` (PNG -> ICO)
+  - ESLint
+- 사용 메모/명령어:
+  - `node -e \"...sharp('src/app/icon.svg').resize(256,256).png().toFile('/tmp/lightlog-icon-256.png')...\"`
+  - `sips -s format ico /tmp/lightlog-icon-256.png --out src/app/favicon.ico`
+  - `npm run lint`
+- 다음 액션:
+  - 브라우저 캐시를 비운 뒤 탭 아이콘(.ico)과 Upload 버튼 가독성을 실브라우저에서 확인한다.
+
+## 2026-02-21 01:45 KST - favicon 아이콘 전략을 SVG 우선으로 전환
+
+- 일시:
+  - 2026-02-21 01:45:44 KST
+- 목표:
+  - 탭 아이콘 적용 방식을 `.ico` 우선에서 `SVG` 우선으로 전환한다.
+- 수행 단계:
+  - `src/app/layout.tsx` `metadata.icons`에서 `icon`, `shortcut`을 `/icon.svg`로 변경했다.
+  - `apple` 아이콘은 기존처럼 `/icon.svg`를 유지했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js App Router metadata icons 설정
+- 사용 메모/명령어:
+  - `git add src/app/layout.tsx docs/execution-log.md src/app/icon.svg`
+- 다음 액션:
+  - Vercel 배포 후 브라우저 강력 새로고침으로 새 SVG 탭 아이콘 반영 여부를 확인한다.
