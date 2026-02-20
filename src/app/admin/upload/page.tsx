@@ -2,6 +2,7 @@
 
 import { createClient, type Session } from "@supabase/supabase-js";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type Status =
   | { type: "idle" }
@@ -423,11 +424,21 @@ export default function AdminUploadPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 pb-14 pt-10 sm:px-6 lg:px-8">
       <header className="mb-8 border-b border-stone-200 pb-5">
-        <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Admin</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">Upload Photo</h1>
-        <p className="mt-2 text-sm text-stone-600">
-          Supabase Auth 로그인 + 관리자 이메일 allowlist 검증 후 업로드됩니다.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Admin</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">Upload Photo</h1>
+            <p className="mt-2 text-sm text-stone-600">
+              Supabase Auth 로그인 + 관리자 이메일 allowlist 검증 후 업로드됩니다.
+            </p>
+          </div>
+          <Link
+            href="/admin/photos"
+            className="rounded-md border border-stone-300 px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
+          >
+            Manage Photos
+          </Link>
+        </div>
       </header>
 
       <div className="space-y-5">
@@ -484,15 +495,15 @@ export default function AdminUploadPage() {
 
         <form onSubmit={onSubmit} className="space-y-5">
           <label className="block">
-          <span className="mb-1 block text-sm font-medium text-stone-700">Image File</span>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => void onFileChange(e.target.files?.[0] ?? null)}
-            className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm"
-            required
-          />
-        </label>
+            <span className="mb-1 block text-sm font-medium text-stone-700">Image File</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => void onFileChange(e.target.files?.[0] ?? null)}
+              className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm"
+              required
+            />
+          </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">

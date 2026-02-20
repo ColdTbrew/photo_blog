@@ -100,6 +100,21 @@ npm run supabase:sync:storage
   - API는 Bearer access token 검증 + `ADMIN_ALLOWED_EMAILS` allowlist 검사
   - `ADMIN_UPLOAD_TOKEN`이 설정된 경우 기존 토큰 방식도 fallback으로 허용(점진 이관용)
 
+## Admin Navigation & Management
+
+- 메인(`/`) 우측 상단:
+  - 비로그인: `GitHub 로그인` 버튼 표시
+  - 관리자 로그인: `Upload`, `Manage`, `로그아웃` 버튼 표시
+- 관리자 목록:
+  - 경로: `/admin/photos`
+  - 기능: 사진 목록 확인 + 상세 페이지 이동
+- 상세 관리자 액션:
+  - 경로: `/photo/[slug]`
+  - 관리자에게만 `Edit`, `Delete` 버튼 노출
+  - `Edit`: title/caption/tags/takenAt/slug 수정 가능
+  - slug 변경 저장 시 새 상세 URL로 즉시 이동
+  - `Delete`: `DELETE` 확인 입력 후 photos 레코드 + storage 객체 즉시 삭제
+
 ### Admin Upload - GitHub OAuth 설정
 
 1. Supabase `Authentication > Providers > GitHub`를 활성화한다.

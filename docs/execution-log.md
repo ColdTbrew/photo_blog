@@ -820,3 +820,37 @@
   - Auto terminal mode detection: `git config --global delta.detect-dark-light auto`
 - Next action:
   - If desired, add shell aliases/functions (`delta-dark`, `delta-light`) for one-command switching.
+
+## 2026-02-21 01:29 KST - 관리자 메인 진입/상세 편집삭제/관리 목록 구현
+
+- 일시:
+  - 2026-02-21 01:29:01 KST
+- 목표:
+  - 관리자 사용성이 좋아지도록 메인 화면 로그인/업로드 진입, 상세 편집/삭제, 관리자 목록 화면을 구현한다.
+- 수행 단계:
+  - `src/lib/admin-auth-server.ts`를 추가해 서버 공통 관리자 인증(`Bearer + ADMIN_ALLOWED_EMAILS`)과 service role client 생성을 공통화했다.
+  - `src/lib/admin-auth-client.ts`를 추가해 클라이언트 공통 세션/관리자 상태 훅을 구현했다.
+  - `src/components/admin-auth-actions.tsx`를 추가하고 `src/app/page.tsx` 헤더에 연결해 메인 우측 상단 로그인/Upload/Manage/로그아웃 버튼 흐름을 구현했다.
+  - `src/app/api/admin/session/route.ts`를 추가해 클라이언트에서 관리자 여부 확인 API를 제공했다.
+  - `src/app/api/admin/photos/route.ts`를 리팩터링해 공통 인증 유틸을 사용하고 관리자 목록 `GET`을 추가했다.
+  - `src/app/api/admin/photos/[slug]/route.ts`를 추가해 상세에서 사진 메타+slug 수정(`PATCH`)과 즉시 삭제(`DELETE`)를 구현했다.
+  - `src/components/photo-detail-shell.tsx`에 관리자 전용 Edit/Delete 버튼, 편집 모달, 삭제 확인 모달(DELETE 입력)을 추가했다.
+  - `src/app/admin/photos/page.tsx`를 추가해 관리자 사진 목록과 상세 진입 동선을 구현했다.
+  - `src/app/admin/upload/page.tsx` 헤더에 `Manage Photos` 링크를 추가했다.
+  - `README.md`에 관리자 네비게이션/상세 편집삭제/관리 목록 기능 섹션을 추가했다.
+  - `.env.example`에서 이번 범위와 무관한 AI env 항목을 제거해 현재 구현과 문서 정합성을 맞췄다.
+- Troubleshooting:
+  - 이슈: `react-hooks/preserve-manual-memoization`, `react-hooks/set-state-in-effect` lint 에러가 발생했다.
+  - 원인: 초기 `useAdminSession` 구현에서 의존성/이펙트 구조가 React hooks 규칙과 충돌했다.
+  - 조치: 인증 훅을 단순화하여 세션 동기화 루틴 내부에서 관리자 상태를 갱신하도록 재구성했다.
+- 사용 기술/도구:
+  - Next.js App Router (page + route handlers)
+  - Supabase Auth (`@supabase/supabase-js`)
+  - ESLint
+  - Shell (`rg`, `sed`, `date`)
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `npm run build`
+  - `find src/app/api/admin -maxdepth 4 -type f | sort`
+- 다음 액션:
+  - 관리자 계정으로 메인(`/`) → Upload/Manage 진입, 상세(`/photo/[slug]`) 편집/삭제 흐름을 브라우저에서 E2E로 확인한다.

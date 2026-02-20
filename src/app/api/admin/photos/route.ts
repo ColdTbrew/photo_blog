@@ -1,115 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { ensureMinimumResolution, WEBP_QUALITY_UPLOAD } from "@/lib/image-resolution";
 import { invalidatePhotosCache } from "@/lib/photos";
+import { authorizeAdminRequest, createServiceRoleClient } from "@/lib/admin-auth-server";
 
 const BUCKET = "photos";
-
-function getRequiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required env var: ${name}`);
-  }
-  return value;
-}
-
-function getOptionalEnv(name: string): string | null {
-  const value = process.env[name];
-  return value ? value : null;
-}
-
-function parseAllowedEmails(raw: string): Set<string> {
-  return new Set(
-    raw
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean)
-  );
-}
-
-function getBearerToken(request: Request): string | null {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader) return null;
-
-  const [scheme, token] = authHeader.split(" ");
-  if (!scheme || !token || scheme.toLowerCase() !== "bearer") return null;
-  return token.trim() || null;
-}
-
-async function authorizeAdmin(
-  request: Request,
-  formData: FormData
-): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
-  const legacyToken = getOptionalEnv("ADMIN_UPLOAD_TOKEN");
-  const formToken = String(formData.get("token") ?? "").trim();
-  if (legacyToken && formToken && formToken === legacyToken) {
-    return { ok: true };
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? getRequiredEnv("SUPABASE_URL");
-  const publishableKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-    null;
-  const allowedEmailsRaw = getOptionalEnv("ADMIN_ALLOWED_EMAILS");
-
-  if (!publishableKey) {
-    return {
-      ok: false,
-      status: 500,
-      error: "Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY for admin auth",
-    };
-  }
-
-  if (!allowedEmailsRaw) {
-    return {
-      ok: false,
-      status: 500,
-      error: "Missing ADMIN_ALLOWED_EMAILS for admin auth",
-    };
-  }
-
-  const allowedEmails = parseAllowedEmails(allowedEmailsRaw);
-  if (allowedEmails.size === 0) {
-    return {
-      ok: false,
-      status: 500,
-      error: "ADMIN_ALLOWED_EMAILS is empty",
-    };
-  }
-
-  const accessToken = getBearerToken(request);
-  if (!accessToken) {
-    return {
-      ok: false,
-      status: 401,
-      error: "Unauthorized",
-    };
-  }
-
-  const authClient = createClient(supabaseUrl, publishableKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { data, error } = await authClient.auth.getUser(accessToken);
-  if (error || !data.user?.email) {
-    return {
-      ok: false,
-      status: 401,
-      error: "Unauthorized",
-    };
-  }
-
-  const email = data.user.email.toLowerCase();
-  if (!allowedEmails.has(email)) {
-    return {
-      ok: false,
-      status: 403,
-      error: "Forbidden",
-    };
-  }
-
-  return { ok: true };
-}
 
 function sanitizeFileBaseName(name: string): string {
   return name.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-").toLowerCase();
@@ -204,13 +98,48 @@ function parseOptionalDate(raw: string, name: string): string | null {
   return parsed.toISOString().slice(0, 10);
 }
 
+export async function GET(request: Request) {
+  const authResult = await authorizeAdminRequest(request);
+  if (!authResult.ok) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+  }
+
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from("photos")
+    .select("id, slug, src, width, height, title, caption, tags, taken_at, created_at")
+    .order("created_at", { ascending: false })
+    .order("slug", { ascending: true });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    items: (data ?? []).map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      src: row.src,
+      width: row.width,
+      height: row.height,
+      title: row.title,
+      caption: row.caption,
+      tags: row.tags,
+      takenAt: row.taken_at,
+      createdAt: row.created_at,
+    })),
+  });
+}
+
 export async function POST(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? getRequiredEnv("SUPABASE_URL");
-    const serviceRoleKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
-
     const formData = await request.formData();
-    const authResult = await authorizeAdmin(request, formData);
+
+    const authResult = await authorizeAdminRequest(request, {
+      formData,
+      allowLegacyToken: true,
+    });
     if (!authResult.ok) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
@@ -241,10 +170,7 @@ export async function POST(request: Request) {
     const exifExposureTimeRaw = String(formData.get("exifExposureTime") ?? "");
 
     if (!title || !caption) {
-      return NextResponse.json(
-        { error: "title and caption are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "title and caption are required" }, { status: 400 });
     }
 
     const width = parsePositiveNumber(widthRaw, "width");
@@ -266,10 +192,7 @@ export async function POST(request: Request) {
     const slug = toSlug(slugRaw || title || file.name.replace(/\.[^.]+$/, "")) || `photo-${Date.now()}`;
 
     const fileName = `${sanitizeFileBaseName(slug)}-${Date.now()}.webp`;
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const supabase = createServiceRoleClient();
 
     const inputBytes = Buffer.from(await file.arrayBuffer());
     const transformed = await ensureMinimumResolution({
