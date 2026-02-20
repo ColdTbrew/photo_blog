@@ -45,6 +45,12 @@ type ExtractedMetadata = {
   takenAt: string;
 };
 
+type AiSuggestion = {
+  title: string;
+  caption: string;
+  tags: string[];
+};
+
 const EMPTY_EXIF: ExifFormState = {
   lastUsedAt: "",
   make: "",
@@ -250,6 +256,8 @@ export default function AdminUploadPage() {
   const [exif, setExif] = useState<ExifFormState>(EMPTY_EXIF);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<Status>({ type: "idle" });
+  const [aiStatus, setAiStatus] = useState<Status>({ type: "idle" });
+  const [aiOverwriteExisting, setAiOverwriteExisting] = useState(false);
 
   const supabase = useMemo(() => {
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
@@ -310,15 +318,58 @@ export default function AdminUploadPage() {
     if (!supabase) return;
     await supabase.auth.signOut();
     setStatus({ type: "idle" });
+    setAiStatus({ type: "idle" });
     setAuthStatus({ type: "idle" });
+  };
+
+  const applyAiSuggestion = (suggestion: AiSuggestion, overwrite: boolean) => {
+    setTitle((prev) => (overwrite || !prev.trim() ? suggestion.title : prev));
+    setCaption((prev) => (overwrite || !prev.trim() ? suggestion.caption : prev));
+    setTags((prev) => (overwrite || !prev.trim() ? suggestion.tags.join(", ") : prev));
+  };
+
+  const requestAiSuggestion = async (targetFile: File, overwrite: boolean) => {
+    if (!isAuthenticated || !session?.access_token) {
+      setAiStatus({ type: "error", message: "AI 추천은 관리자 로그인 후 사용할 수 있습니다." });
+      return;
+    }
+
+    setAiStatus({ type: "loading" });
+
+    try {
+      const formData = new FormData();
+      formData.set("file", targetFile);
+
+      const response = await fetch("/api/admin/photos/ai-suggest", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
+
+      const data = (await response.json()) as (AiSuggestion & { error?: string });
+      if (!response.ok) {
+        throw new Error(data.error ?? "AI 메타데이터 추천에 실패했습니다.");
+      }
+
+      applyAiSuggestion(data, overwrite);
+      setAiStatus({ type: "success", message: "AI 추천 메타데이터를 불러왔습니다." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "알 수 없는 오류";
+      setAiStatus({ type: "error", message });
+    }
   };
 
   const onFileChange = async (nextFile: File | null) => {
     setFile(nextFile);
     if (!nextFile) {
       setExif(EMPTY_EXIF);
+      setAiStatus({ type: "idle" });
       return;
     }
+
+    setAiStatus({ type: "idle" });
 
     try {
       const imageUrl = URL.createObjectURL(nextFile);
@@ -337,6 +388,10 @@ export default function AdminUploadPage() {
     setExif(extracted.exif);
     if (!takenAtNone) {
       setTakenAt((prev) => prev || extracted.takenAt);
+    }
+
+    if (isAuthenticated && session?.access_token) {
+      await requestAiSuggestion(nextFile, aiOverwriteExisting);
     }
   };
 
@@ -504,6 +559,36 @@ export default function AdminUploadPage() {
               required
             />
           </label>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => file && void requestAiSuggestion(file, aiOverwriteExisting)}
+              disabled={!file || aiStatus.type === "loading" || !isAuthenticated}
+              className="inline-flex items-center justify-center rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {aiStatus.type === "loading" ? "AI 추천 생성 중..." : "AI로 메타데이터 추천"}
+            </button>
+            <label className="inline-flex items-center gap-2 text-sm text-stone-700">
+              <input
+                type="checkbox"
+                checked={aiOverwriteExisting}
+                onChange={(e) => setAiOverwriteExisting(e.target.checked)}
+              />
+              기존 값 덮어쓰기
+            </label>
+          </div>
+
+          {aiStatus.type === "error" && (
+            <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {aiStatus.message}
+            </p>
+          )}
+          {aiStatus.type === "success" && (
+            <p className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {aiStatus.message}
+            </p>
+          )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">

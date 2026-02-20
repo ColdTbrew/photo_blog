@@ -854,3 +854,34 @@
   - `find src/app/api/admin -maxdepth 4 -type f | sort`
 - 다음 액션:
   - 관리자 계정으로 메인(`/`) → Upload/Manage 진입, 상세(`/photo/[slug]`) 편집/삭제 흐름을 브라우저에서 E2E로 확인한다.
+
+## 2026-02-21 01:23 KST - 관리자 업로드 AI 메타데이터 추천 기능 구현
+
+- Date/time:
+  - 2026-02-21 01:23:32 KST
+- Goal:
+  - 관리자 업로드 화면에서 이미지 기반 AI 메타데이터(title/caption/tags) 추천 API와 UI 연동을 구현한다.
+- Steps taken:
+  - 새 worktree `../photo_blog_ai_meta`와 브랜치 `feat/ai-upload-metadata`를 현재 HEAD에서 생성했다.
+  - `src/app/api/admin/photos/ai-suggest/route.ts`를 추가해 관리자 Bearer 인증 후 OpenAI Responses API(`fetch`)로 이미지 분석 결과를 받아 JSON(`title`, `caption`, `tags`)을 반환하도록 구현했다.
+  - 서버에서 multipart 파일 유효성(이미지 여부/크기 제한), 모델 응답 JSON 파싱/정규화(문자열 정리, 태그 dedupe), 오류 응답 분기를 추가했다.
+  - `src/app/admin/upload/page.tsx`에 `AI로 메타데이터 추천` 버튼과 `기존 값 덮어쓰기` 토글을 추가했다.
+  - 파일 선택 후 인증된 상태면 AI 추천을 자동 호출하고, 수동 재호출도 가능하게 했다.
+  - 추천값은 기본적으로 빈 필드만 채우고, 덮어쓰기 토글이 켜지면 기존 입력값을 갱신하도록 반영했다.
+  - `README.md`와 `.env.example`에 `OPENAI_API_KEY`, `OPENAI_VISION_MODEL` 환경변수 문서를 추가했다.
+- Troubleshooting (issue, cause, fix):
+  - Issue: sandbox 기본 권한으로는 worktree 경로/`.git` refs 쓰기가 차단되어 브랜치 생성 및 파일 생성이 실패했다.
+  - Cause: writable root가 기본 저장소 경로로 제한되어 worktree(`../photo_blog_ai_meta`)와 `.git` lock 파일 작성이 허용되지 않았다.
+  - Fix: 권한 상승 실행으로 `git worktree add` 및 worktree 내부 파일 생성을 진행했다.
+- Tech stack/tools used:
+  - Next.js App Router route handler
+  - TypeScript, React hooks
+  - OpenAI HTTP API (`fetch`, `/v1/responses`)
+  - Git worktree/branch
+  - Shell (`rg`, `sed`, `date`)
+- Usage notes or commands:
+  - `git worktree add ../photo_blog_ai_meta -b feat/ai-upload-metadata`
+  - `npm run lint`
+  - `npm run build`
+- Next action:
+  - lint/build 결과를 확인한 뒤 해당 worktree 브랜치에서 커밋하고 PR 생성 준비를 진행한다.

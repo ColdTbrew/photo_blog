@@ -68,6 +68,8 @@ npm run dev
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `ADMIN_ALLOWED_EMAILS` (쉼표 구분 관리자 이메일 allowlist, 예: `admin@site.com,owner@site.com`)
 - `ADMIN_UPLOAD_TOKEN` (선택: 레거시 토큰 fallback)
+- `OPENAI_API_KEY` (관리자 업로드 AI 메타데이터 추천 API)
+- `OPENAI_VISION_MODEL` (선택: 기본값 `gpt-4.1-mini`)
 
 실행 순서:
 
@@ -90,6 +92,7 @@ npm run supabase:sync:storage
 - 경로: `/admin/upload`
 - 동작:
   - 이미지 파일 업로드
+  - 업로드 전/중에 AI 비전 모델로 제목/캡션/태그 추천 (수동 수정 가능)
   - `photos` 버킷 저장
   - `public.photos` 레코드 자동 생성
   - 최소 해상도 정책 자동 적용: `short side >= 2000` and `long side >= 3000`
