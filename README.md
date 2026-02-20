@@ -82,9 +82,33 @@ npm run supabase:sync:storage
   - 이미지 파일 업로드
   - `photos` 버킷 저장
   - `public.photos` 레코드 자동 생성
+  - 최소 해상도 정책 자동 적용: `short side >= 2000` and `long side >= 3000`
+  - 기준 미달 이미지는 자동 업스케일 후 WebP로 저장
   - EXIF 자동 추출(가능한 항목) + 수동 수정 입력 후 저장
 - 보안:
   - 폼의 Admin Token 값이 서버 환경변수 `ADMIN_UPLOAD_TOKEN`과 일치해야 업로드 허용
+
+## Image Policy
+
+- 업로드 이미지는 WebP로 변환됩니다.
+- 다운로드 이미지는 AVIF로 변환됩니다.
+- 다운로드 이미지는 서버에서 재인코딩되어 EXIF/메타데이터가 제거됩니다.
+- 데스크탑 품질 기준:
+  - `short side >= 2000`
+  - `long side >= 3000`
+
+기존 데이터 즉시 백필:
+
+```bash
+npm run supabase:backfill:min-resolution
+```
+
+직접 모드 지정:
+
+```bash
+node --env-file=.env.local scripts/supabase/backfill-min-resolution.mjs --mode=replace
+node --env-file=.env.local scripts/supabase/backfill-min-resolution.mjs --mode=versioned
+```
 
 ## Vercel CLI Usage
 

@@ -26,6 +26,7 @@ if (supabaseUrl) {
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: supabaseImagePattern ? [supabaseImagePattern] : [],
+    formats: ["image/avif", "image/webp"],
   },
 };
 

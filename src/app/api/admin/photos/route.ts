@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { ensureMinimumResolution, WEBP_QUALITY_UPLOAD } from "@/lib/image-resolution";
 import { invalidatePhotosCache } from "@/lib/photos";
 
 const BUCKET = "photos";
@@ -167,16 +168,25 @@ export async function POST(request: Request) {
     const takenAt = parseOptionalDate(takenAtRaw, "takenAt");
     const slug = toSlug(slugRaw || title || file.name.replace(/\.[^.]+$/, "")) || `photo-${Date.now()}`;
 
-    const extension = file.name.includes(".") ? file.name.split(".").pop() ?? "jpg" : "jpg";
-    const normalizedExtension = extension.toLowerCase();
-    const fileName = `${sanitizeFileBaseName(slug)}-${Date.now()}.${normalizedExtension}`;
+    const fileName = `${sanitizeFileBaseName(slug)}-${Date.now()}.webp`;
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const bytes = Buffer.from(await file.arrayBuffer());
-    const contentType = file.type || "application/octet-stream";
+    const inputBytes = Buffer.from(await file.arrayBuffer());
+    const transformed = await ensureMinimumResolution({
+      bytes: inputBytes,
+      quality: WEBP_QUALITY_UPLOAD,
+      outputFormat: "webp",
+      enforceMinimum: true,
+      fallbackWidth: width,
+      fallbackHeight: height,
+    });
+    const bytes = transformed.data;
+    const contentType = "image/webp";
+    const outputWidth = transformed.width;
+    const outputHeight = transformed.height;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
@@ -197,8 +207,8 @@ export async function POST(request: Request) {
       slug,
       src,
       storage_path: fileName,
-      width,
-      height,
+      width: outputWidth,
+      height: outputHeight,
       title,
       caption,
       tags,
@@ -223,7 +233,15 @@ export async function POST(request: Request) {
     }
 
     invalidatePhotosCache();
-    return NextResponse.json({ ok: true, id, slug, src });
+    return NextResponse.json({
+      ok: true,
+      id,
+      slug,
+      src,
+      transformed: transformed.upscaled,
+      finalWidth: outputWidth,
+      finalHeight: outputHeight,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });

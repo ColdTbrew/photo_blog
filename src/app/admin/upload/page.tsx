@@ -311,12 +311,26 @@ export default function AdminUploadPage() {
         body: formData,
       });
 
-      const data = (await response.json()) as { error?: string; slug?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        slug?: string;
+        transformed?: boolean;
+        finalWidth?: number;
+        finalHeight?: number;
+      };
       if (!response.ok) {
         throw new Error(data.error ?? "업로드에 실패했습니다.");
       }
 
-      setStatus({ type: "success", message: `업로드 완료: ${data.slug}` });
+      const finalSize =
+        typeof data.finalWidth === "number" && typeof data.finalHeight === "number"
+          ? `${data.finalWidth}x${data.finalHeight}`
+          : `${width}x${height}`;
+      const transformedNotice = data.transformed ? " (자동 업스케일 적용)" : "";
+      setStatus({
+        type: "success",
+        message: `업로드 완료: ${data.slug} | 최종 해상도: ${finalSize}${transformedNotice}`,
+      });
       setTitle("");
       setSlug("");
       setCaption("");

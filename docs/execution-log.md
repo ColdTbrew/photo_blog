@@ -2,366 +2,366 @@
 
 ## 2026-02-18 - Supabase Migration Kickoff (Phase 1)
 
-- Goal: Start Supabase migration and enforce a reusable study log process in-repo.
-- Steps taken:
+- 목표: 시작 Supabase migration and enforce a reusable study log process in-repo.
+- 수행 단계:
   - Added project rule file at `/Users/coldbrew/Documents/photo_blog/photo_blog/AGENTS.md`.
   - Created this log file and logging format.
   - Audited current data source: `/Users/coldbrew/Documents/photo_blog/photo_blog/data/photos.json` and `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/photos.ts`.
   - Added initial Supabase schema SQL and JSON import script scaffold.
-- Troubleshooting:
-  - Issue: No existing repo-level rule file for execution logging.
-  - Cause: Project started without agent/runbook constraints.
-  - Fix: Added explicit mandatory log-update rule in `AGENTS.md`.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: No existing repo-level rule file for execution logging.
+  - 원인: Project started without agent/runbook constraints.
+  - 조치: Added explicit mandatory log-update rule in `AGENTS.md`.
+- 사용 기술/도구:
   - Next.js App Router (existing)
   - Supabase Postgres + Storage (new plan)
   - Node.js script runtime (`.mjs`)
   - Shell tools: `rg`, `cat`, `ls`
-- Usage notes/commands:
+- 사용 메모/명령어:
   - Inspect source model: `cat data/photos.json`
-  - Run migration SQL in Supabase SQL editor: `supabase/migrations/0001_create_photos.sql`
-  - Run import script: `node scripts/supabase/import-photos.mjs`
-- Next action:
+  - 실행 migration SQL in Supabase SQL editor: `supabase/migrations/0001_create_photos.sql`
+  - 실행 import script: `node scripts/supabase/import-photos.mjs`
+- 다음 액션:
   - Connect env vars, execute SQL, import records, upload image files to `photos` bucket, then switch read queries to Supabase in app code.
 
 ## 2026-02-18 - Phase 1 Artifacts Added
 
-- Goal: Make Supabase migration executable and documentable from this repository.
-- Steps taken:
+- 목표: Make Supabase migration executable and documentable from this repository.
+- 수행 단계:
   - Added migration SQL: `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0001_create_photos.sql`
   - Added import script: `/Users/coldbrew/Documents/photo_blog/photo_blog/scripts/supabase/import-photos.mjs`
   - Added env template: `/Users/coldbrew/Documents/photo_blog/photo_blog/.env.example`
   - Added docs: `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/supabase-phase1.md`
-  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md` with rule and Phase 1 runbook
+  - 수정: `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md` with rule and Phase 1 runbook
   - Added npm command: `supabase:import:photos`
   - Installed dependency: `@supabase/supabase-js`
-  - Verified repository lint passes.
-- Troubleshooting:
-  - Issue: Initial environment template was missing.
-  - Cause: Project started as local-file gallery MVP without secret-based services.
-  - Fix: Added `.env.example` and script-side validation for missing vars.
-- Tech stack/tools used:
+  - 검증: repository lint passes.
+- 트러블슈팅:
+  - 이슈: Initial environment template was missing.
+  - 원인: Project started as local-file gallery MVP without secret-based services.
+  - 조치: 추가: `.env.example` and script-side validation for missing vars.
+- 사용 기술/도구:
   - Supabase Postgres + Storage
   - Node.js + `@supabase/supabase-js`
   - SQL migration + RLS policy
   - ESLint for verification
-- Usage notes/commands:
+- 사용 메모/명령어:
   - Install deps: `npm install`
   - Import JSON to DB: `npm run supabase:import:photos`
   - Validate lint: `npm run lint`
-- Next action:
+- 다음 액션:
   - Execute SQL in Supabase, upload storage objects, then switch `src/lib/photos.ts` read path from file to Supabase queries.
 
 ## 2026-02-18 - Supabase Skill Install + Key Refresh Guide
 
-- Goal: Install Supabase skill package and clarify where to fetch current API keys.
-- Steps taken:
-  - Ran `npx skills add supabase/agent-skills` (interactive output observed).
+- 목표: Install Supabase skill package and clarify where to fetch current API keys.
+- 수행 단계:
+  - 실행: `npx skills add supabase/agent-skills` (interactive output observed).
   - Re-ran non-interactive install for Codex: `npx skills add supabase/agent-skills -y -a codex`.
   - Confirmed installation path: `/Users/coldbrew/Documents/photo_blog/photo_blog/.agents/skills/supabase-postgres-best-practices`.
-  - Verified current Supabase docs guidance on key transition (`anon/service_role` and new `publishable`).
-- Troubleshooting:
-  - Issue: First install attempt showed interactive selector, ambiguous completion.
-  - Cause: command executed without explicit non-interactive flags.
-  - Fix: re-run with `-y -a codex`.
-- Tech stack/tools used:
+  - 검증: current Supabase docs guidance on key transition (`anon/service_role` and new `publishable`).
+- 트러블슈팅:
+  - 이슈: First install attempt showed interactive selector, ambiguous completion.
+  - 원인: command executed without explicit non-interactive flags.
+  - 조치: re-run with `-y -a codex`.
+- 사용 기술/도구:
   - `skills` CLI
   - Supabase Dashboard API Keys settings
   - Supabase Docs references
-- Usage notes/commands:
+- 사용 메모/명령어:
   - Install: `npx skills add supabase/agent-skills -y -a codex`
   - Local env file: `/Users/coldbrew/Documents/photo_blog/photo_blog/.env.local`
-- Next action:
+- 다음 액션:
   - Copy fresh Project URL + Publishable key + Service role key from Supabase dashboard and rerun import.
 
 ## 2026-02-18 - Import Attempt After Key Update
 
-- Goal: Verify Supabase connection and run metadata import.
-- Steps taken:
+- 목표: Verify Supabase connection and run metadata import.
+- 수행 단계:
   - Loaded env from `.env.local` and executed `npm run supabase:import:photos`.
-- Troubleshooting:
-  - Issue: `Could not find the table 'public.photos' in the schema cache`.
-  - Cause: SQL migration not yet applied in Supabase project.
-  - Fix: run `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0001_create_photos.sql` in Supabase SQL Editor, then rerun import.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: `Could not find the table 'public.photos' in the schema cache`.
+  - 원인: SQL migration not yet applied in Supabase project.
+  - 조치: run `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0001_create_photos.sql` in Supabase SQL Editor, then rerun import.
+- 사용 기술/도구:
   - Supabase REST via `@supabase/supabase-js`
   - Node script (`import-photos.mjs`)
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `set -a; source .env.local; set +a; npm run supabase:import:photos`
-- Next action:
-  - Apply SQL migration and retry import.
+- 다음 액션:
+  - 적용 SQL migration and retry import.
 
 ## 2026-02-18 - Import UX Improvement
 
-- Goal: Make import command easier and clearer.
-- Steps taken:
+- 목표: Make import command easier and clearer.
+- 수행 단계:
   - Updated npm script to auto-load `.env.local` using `node --env-file=.env.local`.
   - Improved import error handling for missing `public.photos` table with actionable message.
   - Re-ran import to confirm failure message is explicit.
-- Troubleshooting:
-  - Issue: user had to manually source env before running command.
-  - Cause: Node process did not auto-load local env file.
-  - Fix: changed npm script to pass `--env-file=.env.local`.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: user had to manually source env before running command.
+  - 원인: Node process did not auto-load local env file.
+  - 조치: changed npm script to pass `--env-file=.env.local`.
+- 사용 기술/도구:
   - Node.js runtime flags
   - Supabase JS client
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npm run supabase:import:photos`
-- Next action:
+- 다음 액션:
   - Execute migration SQL in Supabase dashboard, then rerun import.
 
 ## 2026-02-18 - Supabase Read Path Switchover
 
-- Goal: Switch app read path from local JSON to Supabase while keeping safe fallback behavior.
-- Steps taken:
+- 목표: Switch app read path from local JSON to Supabase while keeping safe fallback behavior.
+- 수행 단계:
   - Confirmed import success: `Imported 12 records into public.photos`.
-  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/photos.ts` to:
+  - 수정: `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/photos.ts` to:
     - read from `public.photos` via Supabase client using publishable key
     - preserve existing pagination behavior in app layer
     - fallback to local `data/photos.json` if Supabase read fails or env is missing
-  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/next.config.ts` to allow Supabase storage remote image pattern.
+  - 수정: `/Users/coldbrew/Documents/photo_blog/photo_blog/next.config.ts` to allow Supabase storage remote image pattern.
   - Ran lint: pass.
-- Troubleshooting:
-  - Issue: initial import failed due to missing table.
-  - Cause: migration SQL had not been executed yet.
-  - Fix: SQL executed in dashboard, then import succeeded.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: initial import failed due to missing table.
+  - 원인: migration SQL had not been executed yet.
+  - 조치: SQL executed in dashboard, then import succeeded.
+- 사용 기술/도구:
   - Next.js App Router
   - Supabase JS client
   - Supabase Postgres
   - ESLint
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npm run supabase:import:photos`
   - `npm run lint`
-- Next action:
+- 다음 액션:
   - Upload originals to Supabase Storage `photos` bucket and (optional) switch `src` to storage public URLs in DB or read-time mapping.
 
 ## 2026-02-18 - JSON Source Removal + Commit Prep
 
-- Goal: Remove local JSON dependency and make Supabase the single source of truth.
-- Steps taken:
+- 목표: Remove local JSON dependency and make Supabase the single source of truth.
+- 수행 단계:
   - Deleted `/Users/coldbrew/Documents/photo_blog/photo_blog/data/photos.json`.
-  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/photos.ts` to use Supabase-only reads (no JSON fallback).
-  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md` photo add flow for Supabase.
-  - Added `.agents/` to git ignore.
-  - Verified lint passes.
-- Troubleshooting:
-  - Troubleshooting: none.
-- Tech stack/tools used:
+  - 수정: `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/photos.ts` to use Supabase-only reads (no JSON fallback).
+  - 수정: `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md` photo add flow for Supabase.
+  - 추가: `.agents/` to git ignore.
+  - 검증: lint passes.
+- 트러블슈팅:
+  - 트러블슈팅: 없음.
+- 사용 기술/도구:
   - Next.js, TypeScript, Supabase JS client, ESLint
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npm run lint`
-- Next action:
+- 다음 액션:
   - Create commit, then upload files to Supabase Storage and update DB `src` to public URLs.
 
 ## 2026-02-18 - Storage Sync + Public URL Cutover
 
-- Goal: Finish remaining migration work by uploading images to Supabase Storage and switching DB image URLs.
-- Steps taken:
-  - Added `/Users/coldbrew/Documents/photo_blog/photo_blog/scripts/supabase/sync-storage.mjs`.
+- 목표: Finish remaining migration work by uploading images to Supabase Storage and switching DB image URLs.
+- 수행 단계:
+  - 추가: `/Users/coldbrew/Documents/photo_blog/photo_blog/scripts/supabase/sync-storage.mjs`.
   - Added npm script `supabase:sync:storage` in `/Users/coldbrew/Documents/photo_blog/photo_blog/package.json`.
-  - Ran `npm run supabase:sync:storage`.
-  - Verified DB rows now contain Supabase public URL in `src`.
+  - 실행: `npm run supabase:sync:storage`.
+  - 검증: DB rows now contain Supabase public URL in `src`.
   - Updated docs in `README.md` and `docs/supabase-phase1.md` to reflect JSON removal and new sync command.
-- Troubleshooting:
-  - Issue: first sync attempt failed on `DSC00636.heif` upload.
-  - Cause: script uploaded every local file, including files not referenced by DB.
-  - Fix: changed script to upload only filenames listed in `public.photos.storage_path`.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: first sync attempt failed on `DSC00636.heif` upload.
+  - 원인: script uploaded every local file, including files not referenced by DB.
+  - 조치: changed script to upload only filenames listed in `public.photos.storage_path`.
+- 사용 기술/도구:
   - Supabase Storage API
   - Supabase Postgres update API
   - Node.js scripts
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npm run supabase:sync:storage`
   - `node --env-file=.env.local -e "...select slug,src from photos..."` (verification)
-- Next action:
-  - Run `npm run dev` and verify feed/detail images render from Supabase URLs in browser.
+- 다음 액션:
+  - 실행 `npm run dev` and verify feed/detail images render from Supabase URLs in browser.
 
 ## 2026-02-18 - Branding Update (Lightlog by Coldbrew)
 
-- Goal: Apply chosen brand naming across visible UI and metadata.
-- Steps taken:
+- 목표: 적용 chosen brand naming across visible UI and metadata.
+- 수행 단계:
   - Updated global metadata title/description in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/layout.tsx`.
   - Updated home header branding in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/page.tsx`.
   - Updated photo detail page metadata suffix in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/photo/[slug]/page.tsx`.
   - Ran lint check.
-- Troubleshooting:
-  - Troubleshooting: none.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 트러블슈팅: 없음.
+- 사용 기술/도구:
   - Next.js App Router metadata
   - TypeScript
   - ESLint
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npm run lint`
-- Next action:
+- 다음 액션:
   - Add custom domain/OG image and finalize production brand assets.
 
 ## 2026-02-18 - Admin Upload MVP Added
 
-- Goal: Add admin upload page to create photos without manual SQL/script steps.
-- Steps taken:
+- 목표: Add admin upload page to create photos without manual SQL/script steps.
+- 수행 단계:
   - Added API route `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts`.
   - Added admin UI page `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx`.
   - Added cache invalidation helper in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/photos.ts`.
-  - Added `ADMIN_UPLOAD_TOKEN` env template in `/Users/coldbrew/Documents/photo_blog/photo_blog/.env.example`.
+  - 추가: `ADMIN_UPLOAD_TOKEN` env template in `/Users/coldbrew/Documents/photo_blog/photo_blog/.env.example`.
   - Updated admin usage docs in `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`.
-- Troubleshooting:
-  - Troubleshooting: none.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 트러블슈팅: 없음.
+- 사용 기술/도구:
   - Next.js App Router API Routes + Client Page
   - Supabase Storage + Postgres insert (service role key)
   - Token-based endpoint protection
-- Usage notes/commands:
+- 사용 메모/명령어:
   - Open `/admin/upload`
   - Input `ADMIN_UPLOAD_TOKEN`
   - Fill metadata + select image + upload
-- Next action:
+- 다음 액션:
   - Replace token form with Supabase Auth session-based admin guard.
 
 ## 2026-02-18 21:56 KST - EXIF Fields Documentation (No Implementation)
 
-- Goal: Record available EXIF metadata fields for future planning without implementing any feature changes.
-- Steps taken:
-  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/supabase-phase1.md`.
+- 목표: Record available EXIF metadata fields for future planning without implementing any feature changes.
+- 수행 단계:
+  - 수정: `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/supabase-phase1.md`.
   - Added a dedicated section listing EXIF fields observed from sample image metadata.
   - Explicitly documented that parsing/storage/display is not implemented yet.
-- Troubleshooting:
-  - Troubleshooting: none.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 트러블슈팅: 없음.
+- 사용 기술/도구:
   - Markdown documentation
   - Shell command: `date` (timestamp confirmation)
-- Usage notes/commands:
+- 사용 메모/명령어:
   - Reference doc: `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/supabase-phase1.md`
-- Next action:
+- 다음 액션:
   - If needed, define DB/app requirements for selected EXIF fields in a separate implementation phase.
 
 ## 2026-02-18 - Vercel Env Sync for Admin Upload Token
 
-- Goal: Add ADMIN_UPLOAD_TOKEN to Vercel project environments.
-- Steps taken:
+- 목표: Add ADMIN_UPLOAD_TOKEN to Vercel project environments.
+- 수행 단계:
   - Checked Vercel project link from `.vercel/project.json`.
-  - Verified Vercel login via `npx vercel whoami`.
-  - Added `ADMIN_UPLOAD_TOKEN` from local `.env.local` to Development, Preview, Production.
-  - Verified with `npx vercel env ls`.
-- Troubleshooting:
-  - Issue: `vercel` command not found.
-  - Cause: Vercel CLI not installed globally in current shell.
-  - Fix: used `npx vercel ...` commands.
-- Tech stack/tools used:
+  - 검증: Vercel login via `npx vercel whoami`.
+  - 추가: `ADMIN_UPLOAD_TOKEN` from local `.env.local` to Development, Preview, Production.
+  - 검증: with `npx vercel env ls`.
+- 트러블슈팅:
+  - 이슈: `vercel` command not found.
+  - 원인: Vercel CLI not installed globally in current shell.
+  - 조치: used `npx vercel ...` commands.
+- 사용 기술/도구:
   - Vercel CLI (`npx vercel`)
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npx vercel env add ADMIN_UPLOAD_TOKEN development|preview|production`
   - `npx vercel env ls`
-- Next action:
+- 다음 액션:
   - Redeploy and validate `/admin/upload` in production.
 
 ## 2026-02-18 - Vercel CLI Usage Documentation
 
-- Goal: Document repeatable Vercel CLI usage in project docs.
-- Steps taken:
-  - Added `Vercel CLI Usage` section in `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`.
+- 목표: Document repeatable Vercel CLI usage in project docs.
+- 수행 단계:
+  - 추가: `Vercel CLI Usage` section in `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`.
   - Included login check, env list, env add, and production deploy commands.
-- Troubleshooting:
-  - Troubleshooting: none.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 트러블슈팅: 없음.
+- 사용 기술/도구:
   - Vercel CLI (`npx vercel`)
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npx vercel whoami`
   - `npx vercel env ls`
   - `npx vercel env add ...`
   - `npx vercel --prod`
-- Next action:
+- 다음 액션:
   - Commit docs update.
 
 ## 2026-02-18 - Local Upload Not Visible (Cache Issue)
 
-- Goal: Fix newly uploaded image not appearing immediately on localhost.
-- Steps taken:
+- 목표: Fix newly uploaded image not appearing immediately on localhost.
+- 수행 단계:
   - Removed long-lived in-memory photo cache in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/photos.ts`.
   - Kept `invalidatePhotosCache` as compatibility no-op.
-  - Verified lint passes.
-- Troubleshooting:
-  - Issue: newly uploaded item (`sushi`) was in DB/Storage but not visible in feed.
-  - Cause: module-level cache prevented fresh Supabase reads.
-  - Fix: always fetch from Supabase per request (cache removed).
-- Tech stack/tools used:
+  - 검증: lint passes.
+- 트러블슈팅:
+  - 이슈: newly uploaded item (`sushi`) was in DB/Storage but not visible in feed.
+  - 원인: module-level cache prevented fresh Supabase reads.
+  - 조치: always fetch from Supabase per request (cache removed).
+- 사용 기술/도구:
   - Next.js server module behavior
   - Supabase read path
   - ESLint
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npm run lint`
-- Next action:
+- 다음 액션:
   - hard refresh localhost and verify new uploads appear immediately.
 
 ## 2026-02-18 22:14 KST - EXIF Auto-fill + Editable Upload Metadata
 
-- Goal: Save EXIF metadata automatically during admin upload while allowing full manual edits for missing EXIF cases (for example film camera scans).
-- Steps taken:
+- 목표: Save EXIF metadata automatically during admin upload while allowing full manual edits for missing EXIF cases (for example film camera scans).
+- 수행 단계:
   - Added DB migration `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql`.
   - Extended upload API `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts` to accept optional EXIF form fields and persist nullable values.
   - Extended admin upload UI `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx` with EXIF form section.
   - Added EXIF auto extraction from selected file using `exifr`, with editable inputs for all EXIF fields.
   - Added dependency `exifr` to project dependencies.
   - Updated runbook/docs in `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/supabase-phase1.md` and `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`.
-- Troubleshooting:
-  - Troubleshooting: none.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 트러블슈팅: 없음.
+- 사용 기술/도구:
   - Next.js App Router (client page + route handler)
   - Supabase Postgres
   - `exifr` (browser-side EXIF parsing)
   - ESLint
-- Usage notes/commands:
-  - Apply SQL: `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql`
-  - Run lint: `npm run lint`
+- 사용 메모/명령어:
+  - 적용 SQL: `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql`
+  - 실행 lint: `npm run lint`
   - Upload UI: `/admin/upload`
-- Next action:
-  - Apply migration `0002` in Supabase SQL Editor, then verify EXIF fields are inserted/nullable as expected on new uploads.
+- 다음 액션:
+  - 적용 migration `0002` in Supabase SQL Editor, then verify EXIF fields are inserted/nullable as expected on new uploads.
 
 ## 2026-02-18 22:20 KST - Vercel Admin Token Mismatch Fix
 
-- Goal: Resolve `Unauthorized` on production admin upload despite local token input.
-- Steps taken:
-  - Verified Vercel env entries existed for `ADMIN_UPLOAD_TOKEN`.
+- 목표: Resolve `Unauthorized` on production admin upload despite local token input.
+- 수행 단계:
+  - 검증: Vercel env entries existed for `ADMIN_UPLOAD_TOKEN`.
   - Reproduced mismatch with protected API check via `vercel curl` and confirmed `Unauthorized` when posting local token.
   - Re-synced `ADMIN_UPLOAD_TOKEN` in Vercel Development/Preview/Production from local `.env.local`.
   - Triggered new production deployment and confirmed alias moved to `https://photoblog-two.vercel.app`.
   - Re-tested API with local token and confirmed response changed to `file is required` (token accepted).
-- Troubleshooting:
-  - Issue: production `/api/admin/photos` returned `Unauthorized`.
-  - Cause: deployed `ADMIN_UPLOAD_TOKEN` value did not match local `.env.local` token.
-  - Fix: replaced Vercel env token values and redeployed production.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: production `/api/admin/photos` returned `Unauthorized`.
+  - 원인: deployed `ADMIN_UPLOAD_TOKEN` value did not match local `.env.local` token.
+  - 조치: replaced Vercel env token values and redeployed production.
+- 사용 기술/도구:
   - Vercel CLI (`npx vercel env`, `npx vercel --prod`, `npx vercel curl`)
   - Next.js API route auth check (`ADMIN_UPLOAD_TOKEN`)
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npx vercel env rm ADMIN_UPLOAD_TOKEN <environment> -y`
   - `printf '%s' \"$ADMIN_UPLOAD_TOKEN\" | npx vercel env add ADMIN_UPLOAD_TOKEN <environment>`
   - `npx vercel --prod --yes`
   - `npx vercel curl /api/admin/photos --deployment https://photoblog-two.vercel.app -- --request POST --form \"token=...\"`
-- Next action:
+- 다음 액션:
   - Retry upload in browser on latest production deployment and confirm record insert succeeds.
 
 ## 2026-02-18 22:49 KST - Home Intro Copy Update
 
-- Goal: Update home intro sentence to the new Korean copy requested by user.
-- Steps taken:
+- 목표: Update home intro sentence to the new Korean copy requested by user.
+- 수행 단계:
   - Changed intro text in `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/page.tsx`.
   - Replaced sentence with: `사진들로 기억을 남긴 갤러리입니다.`
-- Troubleshooting:
-  - Troubleshooting: none.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 트러블슈팅: 없음.
+- 사용 기술/도구:
   - Next.js App Router
   - TypeScript/TSX text update
-- Usage notes/commands:
+- 사용 메모/명령어:
   - Verify locally: `npm run dev` then open `/`
-- Next action:
+- 다음 액션:
   - Commit and push copy update to trigger Vercel auto deployment.
 
-## 2026-02-18 - Production Deploy via Vercel CLI
+## 2026-02-18 - Production 배포 via Vercel CLI
 
-- Goal: Deploy latest commit to production.
-- Steps taken:
-  - Ran `npx vercel --prod --yes`.
+- 목표: 배포 latest commit to production.
+- 수행 단계:
+  - 실행: `npx vercel --prod --yes`.
   - First deploy failed during Next.js prerender due to missing Supabase public env vars in Vercel production.
   - Added production env vars:
     - `NEXT_PUBLIC_SUPABASE_URL`
@@ -369,73 +369,73 @@
     - `SUPABASE_SERVICE_ROLE_KEY`
   - Re-ran `npx vercel --prod --yes`.
   - Deployment succeeded and alias connected.
-- Troubleshooting:
-  - Issue: build error on `/` with message about missing Supabase read env vars.
-  - Cause: Vercel production had only `ADMIN_UPLOAD_TOKEN` configured.
-  - Fix: synced missing Supabase env vars to production and redeployed.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: build error on `/` with message about missing Supabase read env vars.
+  - 원인: Vercel production had only `ADMIN_UPLOAD_TOKEN` configured.
+  - 조치: synced missing Supabase env vars to production and redeployed.
+- 사용 기술/도구:
   - Vercel CLI (`npx vercel`)
   - Next.js build logs
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npx vercel env add <NAME> production`
   - `npx vercel --prod --yes`
-- Next action:
+- 다음 액션:
   - Verify production feed/admin upload behavior at the aliased domain.
 
 ## 2026-02-18 - EXIF Change Verification + Production Redeploy
 
-- Goal: Review EXIF-related changes and redeploy production.
-- Steps taken:
+- 목표: 검토 EXIF-related changes and redeploy production.
+- 수행 단계:
   - Scanned repository for EXIF changes (admin UI/API, docs, migration `0002`).
-  - Verified local build and lint pass.
+  - 검증: local build and lint pass.
   - Checked Supabase schema compatibility by selecting EXIF columns.
   - Redeployed production using `npx vercel --prod --yes` and confirmed alias update.
-- Troubleshooting:
-  - Issue: DB query returned `column photos.exif_make does not exist`.
-  - Cause: migration `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql` not applied yet.
-  - Fix: pending manual SQL apply in Supabase SQL Editor.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: DB query returned `column photos.exif_make does not exist`.
+  - 원인: migration `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql` not applied yet.
+  - 조치: pending manual SQL apply in Supabase SQL Editor.
+- 사용 기술/도구:
   - Vercel CLI
   - Supabase JS client schema check
   - Next.js build pipeline
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npm run lint`
   - `npm run build`
   - `npx vercel --prod --yes`
-- Next action:
-  - Apply migration `0002_add_photo_exif_columns.sql` in Supabase, then test admin upload EXIF save.
+- 다음 액션:
+  - 적용 migration `0002_add_photo_exif_columns.sql` in Supabase, then test admin upload EXIF save.
 
-## 2026-02-18 - Supabase CLI Migration Apply (0002)
+## 2026-02-18 - Supabase CLI Migration 적용 (0002)
 
-- Goal: Apply EXIF schema migration via Supabase CLI.
-- Steps taken:
+- 목표: 적용 EXIF schema migration via Supabase CLI.
+- 수행 단계:
   - Logged in with `npx supabase login` (user completed auth).
   - Linked project: `npx supabase link --project-ref czecclgcdhfgqzqsdbgj`.
   - Applied migrations: `npx supabase db push`.
   - Re-verified EXIF columns by selecting `exif_make`, `exif_model`, `exif_f_number` via Supabase JS.
-- Troubleshooting:
-  - Issue: initial EXIF column check still failed.
-  - Cause: check command ran in parallel with migration apply.
-  - Fix: reran check sequentially after push completion.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: initial EXIF column check still failed.
+  - 원인: check command ran in parallel with migration apply.
+  - 조치: reran check sequentially after push completion.
+- 사용 기술/도구:
   - Supabase CLI (`npx supabase`)
   - Supabase JS verification query
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npx supabase link --project-ref czecclgcdhfgqzqsdbgj`
   - `npx supabase db push`
-- Next action:
-  - Test `/admin/upload` with EXIF-populated image and verify saved EXIF values in DB.
+- 다음 액션:
+  - 테스트 `/admin/upload` with EXIF-populated image and verify saved EXIF values in DB.
 
 ## 2026-02-18 - Admin Upload UX Fix (Slug + TakenAt Optional)
 
-- Goal: Fix admin upload usability issues (slug input friction, takenAt required friction).
-- Steps taken:
-  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx`:
+- 목표: Fix admin upload usability issues (slug input friction, takenAt required friction).
+- 수행 단계:
+  - 수정: `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx`:
     - slug field no longer required
     - slug is sanitized on blur/submit instead of every keystroke
     - takenAt is auto-filled from EXIF date when available
     - added `Taken At 없음 (none)` checkbox
-  - Updated `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts`:
+  - 수정: `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts`:
     - slug auto-generation when empty
     - `takenAt` optional parsing (`none` or empty -> null)
     - required fields reduced to title/caption
@@ -443,16 +443,156 @@
   - Applied migration with `npx supabase db push`.
   - Updated photo type to allow nullable takenAt and fallback rendering in detail view.
   - Redeployed production with `npx vercel --prod --yes`.
-- Troubleshooting:
-  - Issue: `taken_at` previously required by schema.
-  - Cause: `public.photos.taken_at` had `NOT NULL` constraint from initial schema.
-  - Fix: migration 0003 dropped not-null constraint.
-- Tech stack/tools used:
+- 트러블슈팅:
+  - 이슈: `taken_at` previously required by schema.
+  - 원인: `public.photos.taken_at` had `NOT NULL` constraint from initial schema.
+  - 조치: migration 0003 dropped not-null constraint.
+- 사용 기술/도구:
   - Next.js App Router
   - Supabase Postgres + CLI
   - Vercel CLI
-- Usage notes/commands:
+- 사용 메모/명령어:
   - `npx supabase db push`
   - `npx vercel --prod --yes`
-- Next action:
+- 다음 액션:
   - Validate `/admin/upload` with both cases: EXIF date present and `Taken At 없음` checked.
+
+## 2026-02-20 - 이미지 전송 최적화 (Lazy + WebP + 메타데이터 안전 다운로드)
+
+- 일시:
+  - 2026-02-20T00:00:00Z
+- 목표:
+  - 이미지 네트워크 전송량을 줄이고, 다운로드 파일에서 EXIF/메타데이터가 제거되도록 보장한다.
+- 수행 단계:
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts`를 수정해 업로드 이미지를 `sharp`로 WebP 변환하고 `rotate()`로 방향 보정 후 Supabase Storage에 저장하도록 반영했다.
+  - 신규 `photos` 레코드에 변환 결과 해상도(width/height)가 저장되도록 보장했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/components/photo-card.tsx`에 피드 카드 lazy-loading 힌트(`loading="lazy"`, `decoding="async"`)를 적용했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/photos/[slug]/download/route.ts`를 추가해 서버 재인코딩(WebP) 기반 다운로드 응답을 제공하고 메타데이터 제거 + 첨부 헤더를 적용했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/next.config.ts` 이미지 최적화 포맷에 AVIF/WebP를 포함했다.
+  - TypeScript/ESLint 회귀 확인을 위해 lint를 실행했다.
+- 트러블슈팅:
+  - 이슈: 다운로드 라우트 응답 본문 타입 문제로 `npm run build`가 실패했다.
+  - 원인: `NextResponse` 본문에 Node `Buffer`를 직접 전달해 `BodyInit` 타입과 맞지 않았다.
+  - 조치: 응답 전에 출력 버퍼를 `Uint8Array`로 변환했다.
+- 사용 기술/도구:
+  - Next.js App Router route handlers
+  - `sharp` image processing
+  - Supabase Storage
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 프로덕션 배포 후 피드 카드 lazy-load 동작과 다운로드 버튼 `.webp` 출력(EXIF 제거)을 검증한다.
+
+## 2026-02-20 - 최소 해상도 강제 + 업스케일 백필 도구 추가
+
+- 일시:
+  - 2026-02-20T00:00:00Z
+- 목표:
+  - 업로드/다운로드 경로 전반에 데스크탑 품질 최소 해상도(`short side >= 2000`, `long side >= 3000`)를 강제하고, 필요 시 자동 업스케일 및 기존 데이터 즉시 백필 도구를 추가한다.
+- 수행 단계:
+  - 공통 해상도 모듈 `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/image-resolution.ts`를 추가했다:
+    - 상수(`MIN_SHORT_SIDE`, `MIN_LONG_SIDE`, `WEBP_QUALITY_UPLOAD`, `WEBP_QUALITY_DOWNLOAD`, `UPSCALE_KERNEL`)
+    - `normalizeResolution(width, height)`
+    - `ensureMinimumResolution(buffer)` (회전 보정 + 조건부 업스케일 + WebP 인코딩)
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts`에서 공통 강제 로직을 사용해 업로드 전 처리와 변환 해상도 저장을 적용했다.
+  - 관리자 업로드 API 성공 응답에 `transformed`, `finalWidth`, `finalHeight`를 추가했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/photos/[slug]/download/route.ts`에서 동일 최소 해상도 규칙(기본 on, 쿼리로 토글 가능)을 적용하고 EXIF/메타데이터 제거 유지 + 타임아웃 시 502 응답을 추가했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/upload/page.tsx` 성공 메시지에 최종 해상도와 자동 업스케일 적용 여부를 표시했다.
+  - 전체 백필 스크립트 `/Users/coldbrew/Documents/photo_blog/photo_blog/scripts/supabase/backfill-min-resolution.mjs`를 추가했다:
+    - 모드: `replace`, `versioned`
+    - 행 단위 fetch/정규화/업스케일/WebP 변환/Storage 업로드/DB `src/storage_path/width/height` 갱신
+    - 동시성 제한 및 실패 요약 출력
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/package.json`에 `supabase:backfill:min-resolution` 스크립트를 추가했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md`에 정책/백필 명령을 문서화했다.
+  - lint/build 및 스크립트 문법 체크를 검증했다.
+- 트러블슈팅: 없음
+- 사용 기술/도구:
+  - Next.js App Router route handlers
+  - Sharp (`rotate`, `resize`, `webp`)
+  - Supabase JS client + Storage
+  - Node.js script tooling
+  - ESLint + Next build
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `npm run build`
+  - `node --check scripts/supabase/backfill-min-resolution.mjs`
+  - `npm run supabase:backfill:min-resolution`
+  - `node --env-file=.env.local scripts/supabase/backfill-min-resolution.mjs --mode=replace`
+  - `node --env-file=.env.local scripts/supabase/backfill-min-resolution.mjs --mode=versioned`
+- 다음 액션:
+  - 프로덕션 백필 실행 후 실패 리포트를 검토하고 랜덤 다운로드 샘플 점검으로 최소 해상도/메타데이터 제거를 확인한다.
+
+## 2026-02-20 - 프로덕션 백필 실행 (최소 해상도)
+
+- 일시:
+  - 2026-02-20T00:00:00Z
+- 목표:
+  - 기존 전체 사진에 최소 해상도 정책을 즉시 적용하기 위해 전체 백필을 실행한다.
+- 수행 단계:
+  - `npm run supabase:backfill:min-resolution` (`--mode=replace`)를 실행해 `public.photos` 전체 행을 처리했다.
+  - 1차 실행 결과 14건 중 13건 성공, 1건 타임아웃 실패를 확인했다.
+  - 동일 명령을 재실행해 실패 건을 재시도했고 14/14 성공으로 완료했다.
+  - 최종 리포트 `Processed: 14`, `Transformed (upscaled): 0`, `Failed: 0`를 확인했다.
+- 트러블슈팅:
+  - 이슈: 한 건(`id=p_026`, slug `golden-gate-cargo-ship`)이 원본 fetch 타임아웃으로 실패했다.
+  - 원인: 백필 워커의 원본 이미지 fetch 중 일시적 네트워크 타임아웃이 발생했다.
+  - 조치: 백필 명령 재실행으로 재시도했고 실패 건이 해소되었다.
+- 사용 기술/도구:
+  - Node.js CLI
+  - Supabase Storage + Postgres updates via service role
+  - Sharp image processing pipeline
+- 사용 메모/명령어:
+  - `npm run supabase:backfill:min-resolution`
+- 다음 액션:
+  - 프로덕션에서 랜덤 다운로드 응답을 표본 점검해 WebP 첨부 응답과 메타데이터 제거를 확인한다.
+
+## 2026-02-20 - AVIF 다운로드 강제 + 브라우저 차단 이슈 점검
+
+- 일시:
+  - 2026-02-20T00:00:00Z
+- 목표:
+  - 다운로드 API 출력 포맷을 AVIF로 강제하고 브라우저의 비보안 다운로드 차단 이슈를 점검한다.
+- 수행 단계:
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/image-resolution.ts`를 수정했다:
+    - 인코더 입력을 일반화(`quality`, `outputFormat`)
+    - AVIF 다운로드 품질 상수 추가
+    - 업로드 WebP 유지 + 다운로드 AVIF 인코딩 경로 활성화
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/photos/[slug]/download/route.ts`를 수정해 AVIF 출력으로 고정했다:
+    - `Content-Type: image/avif`
+    - `Content-Disposition: attachment; filename="<slug>.avif"`
+    - `X-Content-Type-Options: nosniff`
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/api/admin/photos/route.ts` 호출부를 새 공통 옵션(`outputFormat: webp`) 기반으로 정리했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/README.md` 정책 문구를 업로드 WebP/다운로드 AVIF 기준으로 갱신했다.
+  - Supabase에서 `public.photos.src` URL 프로토콜을 조회해 혼합 콘텐츠 저장 여부를 점검했고 `https`만 확인했다.
+  - lint/build를 검증했다.
+- 트러블슈팅: 없음
+- 사용 기술/도구:
+  - Next.js route handlers
+  - Sharp AVIF/WebP encoding
+  - Supabase JS verification query
+  - ESLint + Next build
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `npm run build`
+  - `node --env-file=.env.local -e "...query photos src protocols..."`
+- 다음 액션:
+  - 다운로드 버튼 기준 브라우저 동작을 재검증하고 저장 확장자가 `.avif`인지 확인한다.
+
+## 2026-02-20 - 실행 로그 언어 통일 (영문 -> 한글)
+
+- 일시:
+  - 2026-02-20T00:00:00Z
+- 목표:
+  - 기존 실행 로그의 영문 항목을 한글로 통일한다.
+- 수행 단계:
+  - `docs/execution-log.md`의 공통 섹션 라벨(`Goal`, `Steps taken`, `Troubleshooting`, `Tech stack/tools used`, `Usage notes/commands`, `Next action`)을 한글 라벨로 일괄 변경했다.
+  - 최근 영문으로 남아 있던 2026-02-20 로그 블록 본문을 한글 문장으로 번역해 갱신했다.
+- 트러블슈팅: 없음
+- 사용 기술/도구:
+  - 텍스트 치환 (`perl`)
+  - 수동 편집 (`apply_patch`)
+- 사용 메모/명령어:
+  - `perl -0pi -e '...replace...' docs/execution-log.md`
+- 다음 액션:
+  - 이후 신규 로그는 한글로만 작성한다.

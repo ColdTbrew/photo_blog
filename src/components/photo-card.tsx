@@ -111,6 +111,8 @@ export function PhotoCard({ photo }: Props) {
           width={photo.width}
           height={photo.height}
           className="h-auto w-full object-cover"
+          loading="lazy"
+          decoding="async"
           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
       </Link>
@@ -137,8 +139,7 @@ export function PhotoCard({ photo }: Props) {
           </button>
 
           <a
-            href={photo.src}
-            download
+            href={`/api/photos/${photo.slug}/download`}
             aria-label="사진 다운로드"
             className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/92 text-stone-700 shadow-sm transition hover:bg-white"
           >
