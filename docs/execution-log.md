@@ -755,6 +755,26 @@
 - 다음 액션:
   - 이후 실행 로그에는 민감한 개인 경로 없이 리포 상대경로만 사용한다.
 
+## 2026-02-21 00:40 KST - README 멀티에이전트 가이드 및 경로 표기 정리
+
+- 일시:
+  - 2026-02-21 00:40:11 KST
+- 목표:
+  - README에 멀티에이전트(`tmux`) 운영 가이드를 추가하고 경로 표기를 리포 상대경로로 정리한다.
+- 수행 단계:
+  - `README.md`의 실행 로그 안내 경로를 절대경로에서 상대경로(`docs/execution-log.md`, `AGENTS.md`)로 변경했다.
+  - `README.md`에 `Multi-Agent Workflow (tmux)` 섹션을 추가했다.
+  - Supabase 문서/마이그레이션 참조 경로를 상대경로(`docs/supabase-phase1.md`, `supabase/migrations/...`)로 정리했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Markdown 문서 편집 (`apply_patch`)
+  - 멀티 에이전트 보조 분석 (`explorer`, `researcher`)
+- 사용 메모/명령어:
+  - `date '+%Y-%m-%d %H:%M:%S %Z'`
+  - `git status --short`
+- 다음 액션:
+  - README 변경을 커밋하고 `main` 브랜치로 푸시한다.
+
 ## 2026-02-20 23:25 KST - Delta Install + Git/Lazygit Integration
 
 - Goal: Install `delta` and apply it as the default diff pager for both Git and Lazygit.

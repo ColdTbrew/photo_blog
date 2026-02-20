@@ -43,14 +43,23 @@ npm run dev
 ## Project Rule: Execution Log
 
 - 모든 실행/작업마다 학습 복습용 기록을 반드시 갱신합니다.
-- 기록 파일: `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/execution-log.md`
-- 규칙 원문: `/Users/coldbrew/Documents/photo_blog/photo_blog/AGENTS.md`
+- 기록 파일: `docs/execution-log.md`
+- 규칙 원문: `AGENTS.md`
+
+## Multi-Agent Workflow (tmux)
+
+- 멀티 에이전트 작업은 `tmux` 세션에서 시작하는 것을 기본으로 합니다.
+- 권장 3분할:
+  - Pane 1: Orchestrator (계획/통합/최종 검증)
+  - Pane 2: Explorer (코드 탐색/영향 범위 분석)
+  - Pane 3: Worker (구현/테스트)
+- 에이전트 간 파일 소유 범위를 분리해 충돌을 줄이고, 최종 검증은 Orchestrator pane에서 수행합니다.
 
 ## Supabase Phase 1
 
 상세 문서:
 
-- `/Users/coldbrew/Documents/photo_blog/photo_blog/docs/supabase-phase1.md`
+- `docs/supabase-phase1.md`
 
 환경변수:
 
@@ -62,8 +71,8 @@ npm run dev
 
 실행 순서:
 
-1. Supabase SQL Editor에서 `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0001_create_photos.sql` 실행
-2. Supabase SQL Editor에서 `/Users/coldbrew/Documents/photo_blog/photo_blog/supabase/migrations/0002_add_photo_exif_columns.sql` 실행 (EXIF 컬럼)
+1. Supabase SQL Editor에서 `supabase/migrations/0001_create_photos.sql` 실행
+2. Supabase SQL Editor에서 `supabase/migrations/0002_add_photo_exif_columns.sql` 실행 (EXIF 컬럼)
 3. (초기 1회) 메타데이터 import (`data/photos.json`이 있을 때):
 
 ```bash
