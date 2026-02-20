@@ -67,7 +67,9 @@ npm run dev
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `ADMIN_ALLOWED_EMAILS` (쉼표 구분 관리자 이메일 allowlist, 예: `admin@site.com,owner@site.com`)
-- `ADMIN_UPLOAD_TOKEN` (선택: 레거시 토큰 fallback)
+- `ADMIN_UPLOAD_TOKEN` (선택: 레거시 토큰 값)
+- `ADMIN_UPLOAD_LEGACY_TOKEN_ENABLED` (선택: `true`일 때만 레거시 토큰 fallback 허용)
+- `ADMIN_UPLOAD_MAX_FILE_SIZE_BYTES` (선택: 업로드 최대 파일 크기 바이트, 기본 `26214400` = 25MB)
 
 실행 순서:
 
@@ -98,7 +100,9 @@ npm run supabase:sync:storage
 - 보안:
   - Supabase Auth 로그인 후 업로드 가능
   - API는 Bearer access token 검증 + `ADMIN_ALLOWED_EMAILS` allowlist 검사
-  - `ADMIN_UPLOAD_TOKEN`이 설정된 경우 기존 토큰 방식도 fallback으로 허용(점진 이관용)
+  - 레거시 토큰 방식은 `ADMIN_UPLOAD_LEGACY_TOKEN_ENABLED=true`일 때만 fallback 허용(기본 비활성)
+  - 업로드 파일은 MIME 타입/최대 파일 크기 검증 후 처리
+  - 다운로드 API는 Supabase Storage의 신뢰된 URL만 허용해 서버 측 임의 URL fetch를 차단
 
 ### Admin Upload - GitHub OAuth 설정
 

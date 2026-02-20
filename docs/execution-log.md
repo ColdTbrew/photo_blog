@@ -820,3 +820,35 @@
   - Auto terminal mode detection: `git config --global delta.detect-dark-light auto`
 - Next action:
   - If desired, add shell aliases/functions (`delta-dark`, `delta-light`) for one-command switching.
+
+## 2026-02-21 01:00 KST - 보안 점검 및 즉시 패치(새 워킹트리/브랜치)
+
+- 일시:
+  - 2026-02-21 01:00:04 KST
+- 목표:
+  - 새 워킹트리/브랜치에서 전체 보안 점검을 수행하고, 확인된 보안 이슈를 즉시 패치한다.
+- 수행 단계:
+  - `git worktree add -b security-audit-patch-20260220 /tmp/photo_blog-security-audit main`로 분리 워킹트리와 전용 브랜치를 생성했다.
+  - Next.js/React 보안 가이드 기준으로 `src/app/api/admin/photos/route.ts`, `src/app/api/photos/[slug]/download/route.ts`, `src/app/admin/upload/page.tsx`, `src/lib/photos.ts`, `next.config.ts`를 점검했다.
+  - `npm audit --omit=dev --json`으로 프로덕션 의존성 취약점이 없는지 확인했다(0건).
+  - 관리자 업로드 API에 업로드 MIME/용량 검증, 레거시 토큰 opt-in 강제(`ADMIN_UPLOAD_LEGACY_TOKEN_ENABLED=true`일 때만 허용), 상수시간 토큰 비교를 추가했다.
+  - 다운로드 API에 신뢰된 Supabase Storage URL만 허용하는 검증과 안전한 다운로드 파일명 정규화를 추가했다.
+  - `README.md`에 신규 보안 환경변수(`ADMIN_UPLOAD_LEGACY_TOKEN_ENABLED`, `ADMIN_UPLOAD_MAX_FILE_SIZE_BYTES`)와 보안 동작 변경사항을 반영했다.
+  - `npm run lint`로 코드 검증을 수행했다.
+- Troubleshooting:
+  - 이슈: `npm run build`가 실패했다.
+  - 원인: 빌드 시점 환경변수(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) 미설정.
+  - 조치: 코드 수정과 무관한 환경 문제로 확인했고, 보안 패치 자체는 린트 통과 상태로 유지했다.
+- 사용 기술/도구:
+  - Git worktree/branch
+  - Next.js 16 + TypeScript
+  - Supabase Auth/Storage
+  - npm audit, ESLint
+  - Shell (`rg`, `sed`, `apply_patch`)
+- 사용 메모/명령어:
+  - `git worktree add -b security-audit-patch-20260220 /tmp/photo_blog-security-audit main`
+  - `npm audit --omit=dev --json`
+  - `npm run lint`
+- 다음 액션:
+  - 배포 환경에서 `ADMIN_UPLOAD_LEGACY_TOKEN_ENABLED`를 기본 비활성으로 유지하고, 필요 시에만 한시적으로 활성화한다.
+  - CI/배포 빌드 검증을 위해 Supabase 환경변수를 설정한 뒤 `npm run build`를 재실행한다.

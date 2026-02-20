@@ -1,9 +1,21 @@
+import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { ensureMinimumResolution, WEBP_QUALITY_UPLOAD } from "@/lib/image-resolution";
 import { invalidatePhotosCache } from "@/lib/photos";
 
 const BUCKET = "photos";
+const DEFAULT_MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/avif",
+  "image/tiff",
+]);
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -16,6 +28,37 @@ function getRequiredEnv(name: string): string {
 function getOptionalEnv(name: string): string | null {
   const value = process.env[name];
   return value ? value : null;
+}
+
+function parseBooleanEnv(name: string): boolean {
+  const value = getOptionalEnv(name);
+  if (!value) {
+    return false;
+  }
+  return value.trim().toLowerCase() === "true";
+}
+
+function getMaxUploadSizeBytes(): number {
+  const value = getOptionalEnv("ADMIN_UPLOAD_MAX_FILE_SIZE_BYTES");
+  if (!value) {
+    return DEFAULT_MAX_UPLOAD_SIZE_BYTES;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_MAX_UPLOAD_SIZE_BYTES;
+  }
+
+  return Math.floor(parsed);
+}
+
+function safeTokenEquals(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  if (left.length !== right.length) {
+    return false;
+  }
+  return timingSafeEqual(left, right);
 }
 
 function parseAllowedEmails(raw: string): Set<string> {
@@ -40,9 +83,10 @@ async function authorizeAdmin(
   request: Request,
   formData: FormData
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const allowLegacyToken = parseBooleanEnv("ADMIN_UPLOAD_LEGACY_TOKEN_ENABLED");
   const legacyToken = getOptionalEnv("ADMIN_UPLOAD_TOKEN");
   const formToken = String(formData.get("token") ?? "").trim();
-  if (legacyToken && formToken && formToken === legacyToken) {
+  if (allowLegacyToken && legacyToken && formToken && safeTokenEquals(formToken, legacyToken)) {
     return { ok: true };
   }
 
@@ -208,6 +252,18 @@ export async function POST(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? getRequiredEnv("SUPABASE_URL");
     const serviceRoleKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+    const maxUploadSizeBytes = getMaxUploadSizeBytes();
+    const contentLengthHeader = request.headers.get("content-length");
+
+    if (contentLengthHeader) {
+      const contentLength = Number(contentLengthHeader);
+      if (Number.isFinite(contentLength) && contentLength > maxUploadSizeBytes + 1024 * 1024) {
+        return NextResponse.json(
+          { error: `file is too large (max ${maxUploadSizeBytes} bytes)` },
+          { status: 413 }
+        );
+      }
+    }
 
     const formData = await request.formData();
     const authResult = await authorizeAdmin(request, formData);
@@ -218,6 +274,15 @@ export async function POST(request: Request) {
     const file = formData.get("file");
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "file is required" }, { status: 400 });
+    }
+    if (file.size > maxUploadSizeBytes) {
+      return NextResponse.json(
+        { error: `file is too large (max ${maxUploadSizeBytes} bytes)` },
+        { status: 413 }
+      );
+    }
+    if (!ALLOWED_IMAGE_TYPES.has(file.type.toLowerCase())) {
+      return NextResponse.json({ error: "unsupported file type" }, { status: 400 });
     }
 
     const slugRaw = String(formData.get("slug") ?? "").trim();
