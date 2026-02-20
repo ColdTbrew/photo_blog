@@ -31,7 +31,7 @@ export function AdminAuthActions() {
         <>
           <Link
             href="/admin/upload"
-            className="rounded-full border border-stone-900 bg-stone-900 px-4 py-2 text-sm text-white transition hover:bg-stone-700"
+            className="rounded-full border border-stone-900 bg-stone-900 px-4 py-2 text-sm font-semibold !text-white shadow-sm transition hover:bg-stone-700"
           >
             Upload
           </Link>
