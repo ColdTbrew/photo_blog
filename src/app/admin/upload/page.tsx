@@ -51,6 +51,10 @@ type AiSuggestion = {
   tags: string[];
 };
 
+const AI_IMAGE_MAX_DIMENSION = 1000;
+const AI_IMAGE_JPEG_QUALITY = 0.82;
+const AI_IMAGE_TARGET_MIME = "image/jpeg";
+
 const EMPTY_EXIF: ExifFormState = {
   lastUsedAt: "",
   make: "",
@@ -158,6 +162,59 @@ function getAlphaChannelFromMimeType(file: File): BooleanSelect {
     return "false";
   }
   return "";
+}
+
+async function createAiSuggestionImage(file: File): Promise<File> {
+  if (typeof window === "undefined" || !file.type.startsWith("image/")) {
+    return file;
+  }
+
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("이미지 로드에 실패했습니다."));
+      img.src = sourceUrl;
+    });
+
+    const originalWidth = image.naturalWidth || 0;
+    const originalHeight = image.naturalHeight || 0;
+    if (originalWidth <= 0 || originalHeight <= 0) {
+      return file;
+    }
+
+    const maxSide = Math.max(originalWidth, originalHeight);
+    const scale = maxSide > AI_IMAGE_MAX_DIMENSION ? AI_IMAGE_MAX_DIMENSION / maxSide : 1;
+    const targetWidth = Math.max(1, Math.round(originalWidth * scale));
+    const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return file;
+    }
+    context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, AI_IMAGE_TARGET_MIME, AI_IMAGE_JPEG_QUALITY);
+    });
+    if (!blob) {
+      return file;
+    }
+
+    const lastDot = file.name.lastIndexOf(".");
+    const baseName = lastDot > 0 ? file.name.slice(0, lastDot) : file.name;
+    return new File([blob], `${baseName}-ai.jpg`, {
+      type: AI_IMAGE_TARGET_MIME,
+      lastModified: Date.now(),
+    });
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
 }
 
 async function extractExifFormState(file: File): Promise<ExifFormState> {
@@ -337,8 +394,9 @@ export default function AdminUploadPage() {
     setAiStatus({ type: "loading" });
 
     try {
+      const aiFile = await createAiSuggestionImage(targetFile);
       const formData = new FormData();
-      formData.set("file", targetFile);
+      formData.set("file", aiFile);
 
       const response = await fetch("/api/admin/photos/ai-suggest", {
         method: "POST",

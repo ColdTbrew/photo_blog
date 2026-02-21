@@ -1107,3 +1107,28 @@
   - `npx vercel --prod --yes`
 - 다음 액션:
   - `/admin/photos -> 상세/수정 -> Edit` 클릭 시 더 이상 목록으로 돌아가지 않는지 확인한다.
+
+## 2026-02-21 - AI 메타데이터 추천 payload 초과 완화
+
+- 일시:
+  - 2026-02-21T15:48:43Z
+- 목표:
+  - 관리자 업로드에서 AI 메타데이터 추천 호출 시 `FUNCTION_PAYLOAD_TOO_LARGE` 오류를 줄이기 위해 AI 요청 이미지 크기를 축소한다.
+- 수행 단계:
+  - `src/app/admin/upload/page.tsx`에 AI 추천 전용 이미지 변환 로직(`createAiSuggestionImage`)을 추가했다.
+  - AI 추천 요청 파일을 원본 대신 축소/압축본으로 교체했다.
+  - 장축 기준을 1000px로 적용해 AI 요청 payload를 안정적으로 낮췄다.
+  - `src/app/api/admin/photos/ai-suggest/route.ts`의 파일 제한값을 4MB로 조정해 서버 검증 기준을 현실화했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- 트러블슈팅:
+  - 이슈: AI 추천 호출 시 `Request Entity Too Large` / `FUNCTION_PAYLOAD_TOO_LARGE` 발생.
+  - 원인: 원본 고해상도 이미지를 multipart로 그대로 전달해 함수 요청 본문 제한을 초과.
+  - 해결: 클라이언트에서 AI 전송용 이미지를 장축 1000px로 리사이즈 + JPEG 압축 후 전송.
+- 사용 기술/도구:
+  - Next.js App Router
+  - 브라우저 Canvas API (`canvas.toBlob`)
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 프로덕션에서 `/admin/upload` AI 추천 버튼으로 대용량 이미지 테스트 후 오류 재발 여부를 확인한다.
