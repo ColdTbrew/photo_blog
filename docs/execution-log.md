@@ -1352,3 +1352,24 @@
   - `npm run lint`
 - 다음 액션:
   - `/admin/upload`에서 추천 실행 시 Title/Tags만 자동 채워지고 Caption은 그대로 유지되는지 확인한다.
+
+## 2026-02-21 - 관리자 화면 홈 아이콘 버튼 추가
+
+- 일시:
+  - 2026-02-21T16:26:02Z
+- 목표:
+  - 관리자 화면에서 메인 홈(`/`)으로 빠르게 이동할 수 있는 UI를 제공한다.
+- 수행 단계:
+  - `src/app/admin/upload/page.tsx` 헤더 우측 액션 영역에 집 모양 아이콘 버튼(`href="/"`)을 추가했다.
+  - `src/app/admin/photos/page.tsx` 헤더 우측 액션 영역에도 동일한 홈 아이콘 버튼을 추가했다.
+  - 두 버튼에 `aria-label="홈으로 이동"`을 적용해 접근성을 확보했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js `Link`
+  - Inline SVG icon
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - `/admin/upload`, `/admin/photos`에서 홈 아이콘 버튼 클릭 시 `/`로 즉시 이동하는지 확인한다.

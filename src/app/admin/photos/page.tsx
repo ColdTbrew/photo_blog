@@ -56,6 +56,16 @@ export default function AdminPhotosPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Link
+            href="/"
+            aria-label="홈으로 이동"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-stone-300 text-stone-700 hover:bg-stone-100"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M6.5 9.5V21h11V9.5" />
+            </svg>
+          </Link>
+          <Link
             href="/admin/upload"
             className="rounded-md border border-stone-300 px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
           >
