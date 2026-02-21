@@ -6,9 +6,29 @@ const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
 
 type AiSuggestion = {
   title: string;
-  caption: string;
   tags: string[];
 };
+
+type OpenAiErrorPayload = {
+  status: number;
+  message: string;
+  type: string;
+  code: string;
+  param: string;
+  requestId: string;
+  model: string;
+};
+
+class OpenAiRequestError extends Error {
+  status: number;
+  payload: OpenAiErrorPayload;
+
+  constructor(payload: OpenAiErrorPayload) {
+    super(payload.message);
+    this.status = payload.status;
+    this.payload = payload;
+  }
+}
 
 type AdminAuthResult =
   | { ok: true; email: string }
@@ -132,11 +152,6 @@ function sanitizeTitle(value: unknown): string {
   return normalized.slice(0, 120);
 }
 
-function sanitizeCaption(value: unknown): string {
-  const normalized = safeString(value).replace(/\s+/g, " ");
-  return normalized.slice(0, 400);
-}
-
 function sanitizeTags(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -162,7 +177,12 @@ function extractJsonFromText(text: string): unknown {
 
   const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const target = fencedMatch ? fencedMatch[1].trim() : trimmed;
-  return JSON.parse(target);
+  try {
+    return JSON.parse(target);
+  } catch {
+    const snippet = target.slice(0, 240).replace(/\s+/g, " ");
+    throw new Error(`Model did not return valid JSON. Raw snippet: ${snippet}`);
+  }
 }
 
 function parseSuggestion(raw: unknown): AiSuggestion {
@@ -172,14 +192,13 @@ function parseSuggestion(raw: unknown): AiSuggestion {
 
   const obj = raw as Record<string, unknown>;
   const title = sanitizeTitle(obj.title);
-  const caption = sanitizeCaption(obj.caption);
   const tags = sanitizeTags(obj.tags);
 
-  if (!title || !caption) {
-    throw new Error("Suggestion missing title or caption");
+  if (!title) {
+    throw new Error("Suggestion missing title");
   }
 
-  return { title, caption, tags };
+  return { title, tags };
 }
 
 function readOutputText(payload: Record<string, unknown>): string {
@@ -193,20 +212,53 @@ function readOutputText(payload: Record<string, unknown>): string {
   }
 
   const chunks: string[] = [];
+  const refusals: string[] = [];
+  const outputTypes: string[] = [];
+  const contentTypes: string[] = [];
   for (const item of output) {
     if (!item || typeof item !== "object") continue;
+    const itemType = safeString((item as Record<string, unknown>).type);
+    if (itemType) {
+      outputTypes.push(itemType);
+    }
     const content = (item as Record<string, unknown>).content;
     if (!Array.isArray(content)) continue;
     for (const c of content) {
       if (!c || typeof c !== "object") continue;
+      const contentType = safeString((c as Record<string, unknown>).type);
+      if (contentType) {
+        contentTypes.push(contentType);
+      }
       const text = (c as Record<string, unknown>).text;
       if (typeof text === "string" && text.trim()) {
         chunks.push(text);
       }
+      const refusal = (c as Record<string, unknown>).refusal;
+      if (typeof refusal === "string" && refusal.trim()) {
+        refusals.push(refusal);
+      }
     }
   }
 
-  return chunks.join("\n").trim();
+  const combined = chunks.join("\n").trim();
+  if (combined) {
+    return combined;
+  }
+
+  if (refusals.length > 0) {
+    throw new Error(`Model refusal: ${refusals.join(" | ")}`);
+  }
+
+  const status = safeString(payload.status) || "unknown";
+  const outputSummary = outputTypes.length ? outputTypes.join(",") : "none";
+  const contentSummary = contentTypes.length ? contentTypes.join(",") : "none";
+  throw new Error(
+    `Empty model response (status=${status}, output_types=${outputSummary}, content_types=${contentSummary})`
+  );
+}
+
+function isIncompleteStatus(payload: Record<string, unknown>): boolean {
+  return safeString(payload.status).toLowerCase() === "incomplete";
 }
 
 async function callVisionModel(file: File): Promise<AiSuggestion> {
@@ -216,55 +268,107 @@ async function callVisionModel(file: File): Promise<AiSuggestion> {
   const mimeType = file.type || "image/jpeg";
   const dataUrl = `data:${mimeType};base64,${bytes.toString("base64")}`;
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: [
-                "Analyze this photo and suggest metadata for a photo blog.",
-                "Respond as strict JSON object with keys: title (string), caption (string), tags (string[]).",
-                "Use concise, natural language and 3-8 relevant tags.",
-                "No markdown, no explanation, JSON only.",
-              ].join(" "),
-            },
-            {
-              type: "input_image",
-              image_url: dataUrl,
-            },
-          ],
+  const requestOnce = async (maxOutputTokens: number): Promise<Record<string, unknown>> => {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        text: {
+          format: {
+            type: "json_object",
+          },
         },
-      ],
-      max_output_tokens: 300,
-    }),
-  });
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: [
+                  "Analyze this photo and suggest metadata for a photo blog.",
+                  "Respond as strict JSON object with keys: title (string), tags (string[]).",
+                  "Title should be primarily in Korean.",
+                  "Tags should be Korean words/phrases and 3-8 items.",
+                  "No markdown, no explanation, JSON only.",
+                ].join(" "),
+              },
+              {
+                type: "input_image",
+                image_url: dataUrl,
+              },
+            ],
+          },
+        ],
+        max_output_tokens: maxOutputTokens,
+      }),
+    });
 
-  const raw = (await response.json()) as Record<string, unknown>;
-  if (!response.ok) {
-    const errorObject = raw.error;
-    const details =
-      errorObject && typeof errorObject === "object"
-        ? safeString((errorObject as Record<string, unknown>).message)
-        : "";
-    throw new Error(details ? `OpenAI API error: ${details}` : "OpenAI API request failed");
+    const raw = (await response.json()) as Record<string, unknown>;
+    if (!response.ok) {
+      const errorObject = raw.error;
+      const message =
+        errorObject && typeof errorObject === "object"
+          ? safeString((errorObject as Record<string, unknown>).message)
+          : "OpenAI API request failed";
+      const type =
+        errorObject && typeof errorObject === "object"
+          ? safeString((errorObject as Record<string, unknown>).type)
+          : "";
+      const code =
+        errorObject && typeof errorObject === "object"
+          ? safeString((errorObject as Record<string, unknown>).code)
+          : "";
+      const param =
+        errorObject && typeof errorObject === "object"
+          ? safeString((errorObject as Record<string, unknown>).param)
+          : "";
+      const requestId = safeString(response.headers.get("x-request-id"));
+
+      throw new OpenAiRequestError({
+        status: response.status,
+        message,
+        type,
+        code,
+        param,
+        requestId,
+        model,
+      });
+    }
+
+    return raw;
+  };
+
+  const tokenBudgets = [300, 900, 1800];
+  let lastError: Error | null = null;
+
+  for (const maxTokens of tokenBudgets) {
+    const raw = await requestOnce(maxTokens);
+    try {
+      const text = readOutputText(raw);
+      const parsed = extractJsonFromText(text);
+      return parseSuggestion(parsed);
+    } catch (error) {
+      if (!(error instanceof Error)) {
+        throw error;
+      }
+      lastError = error;
+
+      const isJsonParseIssue = error.message.includes("Model did not return valid JSON");
+      const shouldRetry = isIncompleteStatus(raw) || isJsonParseIssue;
+      if (!shouldRetry || maxTokens === tokenBudgets[tokenBudgets.length - 1]) {
+        throw error;
+      }
+    }
   }
 
-  const text = readOutputText(raw);
-  if (!text) {
-    throw new Error("Empty model response");
+  if (lastError) {
+    throw lastError;
   }
-
-  const parsed = extractJsonFromText(text);
-  return parseSuggestion(parsed);
+  throw new Error("Unknown model parsing error");
 }
 
 export async function POST(request: Request) {
@@ -293,6 +397,21 @@ export async function POST(request: Request) {
     return NextResponse.json(suggestion);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
+    if (error instanceof OpenAiRequestError) {
+      console.error("[ai-suggest] OpenAI request failed", error.payload);
+      return NextResponse.json(
+        {
+          error: error.payload.message,
+          model: error.payload.model,
+          openaiStatus: error.payload.status,
+          openaiType: error.payload.type,
+          openaiCode: error.payload.code,
+          openaiParam: error.payload.param,
+          openaiRequestId: error.payload.requestId,
+        },
+        { status: 502 }
+      );
+    }
     if (message.includes("OPENAI_API_KEY")) {
       return NextResponse.json({ error: message }, { status: 500 });
     }

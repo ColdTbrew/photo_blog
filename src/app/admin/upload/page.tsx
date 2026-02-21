@@ -47,8 +47,17 @@ type ExtractedMetadata = {
 
 type AiSuggestion = {
   title: string;
-  caption: string;
   tags: string[];
+};
+
+type AiSuggestErrorResponse = {
+  error?: string;
+  model?: string;
+  openaiStatus?: number;
+  openaiType?: string;
+  openaiCode?: string;
+  openaiParam?: string;
+  openaiRequestId?: string;
 };
 
 const AI_IMAGE_MAX_DIMENSION = 1000;
@@ -381,7 +390,6 @@ export default function AdminUploadPage() {
 
   const applyAiSuggestion = (suggestion: AiSuggestion, overwrite: boolean) => {
     setTitle((prev) => (overwrite || !prev.trim() ? suggestion.title : prev));
-    setCaption((prev) => (overwrite || !prev.trim() ? suggestion.caption : prev));
     setTags((prev) => (overwrite || !prev.trim() ? suggestion.tags.join(", ") : prev));
   };
 
@@ -406,9 +414,21 @@ export default function AdminUploadPage() {
         body: formData,
       });
 
-      const data = (await response.json()) as (AiSuggestion & { error?: string });
+      const data = (await response.json()) as (AiSuggestion & AiSuggestErrorResponse);
       if (!response.ok) {
-        throw new Error(data.error ?? "AI 메타데이터 추천에 실패했습니다.");
+        const details = [
+          data.error,
+          data.openaiType ? `type=${data.openaiType}` : "",
+          data.openaiCode ? `code=${data.openaiCode}` : "",
+          typeof data.openaiStatus === "number" ? `status=${data.openaiStatus}` : "",
+          data.model ? `model=${data.model}` : "",
+          data.openaiRequestId ? `request_id=${data.openaiRequestId}` : "",
+        ]
+          .filter(Boolean)
+          .join(" | ");
+        const message = details || "AI 메타데이터 추천에 실패했습니다.";
+        console.error("[ai-suggest] failed", data);
+        throw new Error(message);
       }
 
       applyAiSuggestion(data, overwrite);

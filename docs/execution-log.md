@@ -1169,3 +1169,186 @@
   - `npm run lint`
 - 다음 액션:
   - 신규 업로드 이미지에 대해 브라우저 DevTools 네트워크에서 `Cache-Control` 응답/재방문시 캐시 히트 여부를 확인한다.
+
+## 2026-02-21 - AI 추천 모델 이미지 미지원 시 자동 fallback 추가
+
+- 일시:
+  - 2026-02-21T16:00:52Z
+- 목표:
+  - `OPENAI_VISION_MODEL`이 이미지 입력 미지원 모델로 설정된 경우에도 AI 메타데이터 추천이 동작하도록 안정성을 높인다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts`에 `shouldRetryWithDefaultModel` 헬퍼를 추가했다.
+  - OpenAI Responses 호출을 내부 함수(`requestSuggestion`)로 분리하고, 1차 호출 실패 시 에러 메시지를 검사해 이미지 미지원 패턴일 때 `gpt-4.1-mini`로 자동 재시도하도록 변경했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- 트러블슈팅:
+  - 이슈: `/api/admin/photos/ai-suggest` 호출 시 502 응답으로 추천 실패.
+  - 원인: 이미지 입력 미지원 모델(예: `gpt-5-nano`)이 `OPENAI_VISION_MODEL`로 설정되면 OpenAI API 에러가 발생.
+  - 해결: 이미지 미지원 에러 시 기본 비전 모델(`gpt-4.1-mini`)로 자동 fallback 재시도.
+- 사용 기술/도구:
+  - Next.js Route Handler
+  - OpenAI Responses API
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - `/admin/upload`에서 `AI로 메타데이터 추천` 버튼 테스트로 fallback 동작 여부를 확인하고, 필요하면 UI에 "fallback 사용" 안내 문구를 추가한다.
+
+## 2026-02-21 - AI 추천 fallback 로직 제거
+
+- 일시:
+  - 2026-02-21T16:06:05Z
+- 목표:
+  - `OPENAI_VISION_MODEL` 단일 설정값만 사용하도록 AI 추천 라우트를 단순화한다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts`에서 fallback 판별 헬퍼(`shouldRetryWithDefaultModel`)를 제거했다.
+  - OpenAI 호출 흐름을 단일 모델 호출 방식으로 되돌리고, 실패 시 기존처럼 에러를 그대로 반환하도록 정리했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- 트러블슈팅:
+  - 이슈: fallback 로직 도입 후 운영 의도(지정 모델 고정)와 동작이 달라질 수 있음.
+  - 원인: 이미지 미지원 에러 시 자동으로 다른 모델로 재시도하도록 구현됨.
+  - 해결: fallback 재시도 제거, `OPENAI_VISION_MODEL`만 사용.
+- 사용 기술/도구:
+  - Next.js Route Handler
+  - OpenAI Responses API
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - `/api/admin/photos/ai-suggest` 실패 시 응답 본문의 `error` 메시지를 기준으로 모델/권한/요청 포맷을 직접 점검한다.
+
+## 2026-02-21 - AI 추천 502 원인 추적용 진단 정보 확장
+
+- 일시:
+  - 2026-02-21T16:07:28Z
+- 목표:
+  - `/api/admin/photos/ai-suggest`의 502 실패 시 OpenAI 업스트림 원인을 즉시 파악할 수 있도록 오류 가시성을 높인다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts`에 `OpenAiRequestError` 및 payload 타입을 추가했다.
+  - OpenAI 비정상 응답 시 `status`, `type`, `code`, `param`, `x-request-id`, `model`을 수집해 커스텀 에러로 throw하도록 변경했다.
+  - 라우트 catch에서 해당 진단 정보를 JSON 응답(`openaiStatus`, `openaiType`, `openaiCode` 등)으로 반환하고 서버 로그에 구조화 출력하도록 추가했다.
+  - 모델 출력이 JSON이 아닐 때 원문 일부를 포함해 파싱 실패 원인을 확인할 수 있도록 `extractJsonFromText` 오류 메시지를 개선했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- 트러블슈팅:
+  - 이슈: 클라이언트 콘솔에서 502만 확인되어 실제 실패 원인 식별이 어려움.
+  - 원인: 서버가 OpenAI 업스트림 에러를 단순 메시지로 래핑해 반환.
+  - 해결: 업스트림 에러의 구조화 필드와 요청 ID를 응답/로그에 포함하도록 확장.
+- 사용 기술/도구:
+  - Next.js Route Handler
+  - OpenAI Responses API
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 브라우저 DevTools 네트워크에서 `/api/admin/photos/ai-suggest` 응답 JSON의 `openaiStatus/openaiType/openaiCode/openaiRequestId` 값을 확인해 실패 원인을 확정한다.
+
+## 2026-02-21 - 업로드 UI에 AI 실패 상세 표시 추가
+
+- 일시:
+  - 2026-02-21T16:14:32Z
+- 목표:
+  - AI 추천 실패 시 브라우저 네트워크 탭을 열지 않아도 원인 필드를 즉시 확인할 수 있게 한다.
+- 수행 단계:
+  - `src/app/admin/upload/page.tsx`에 `AiSuggestErrorResponse` 타입을 추가했다.
+  - `/api/admin/photos/ai-suggest` 비정상 응답 처리에서 `openaiType/openaiCode/openaiStatus/model/openaiRequestId`를 에러 메시지에 결합해 표시하도록 변경했다.
+  - 동일 payload를 `console.error`로 출력해 디버깅 가시성을 높였다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - React (error handling/UI status messaging)
+  - TypeScript 타입 확장
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - `/admin/upload`에서 추천 버튼 클릭 후 에러 메시지에 노출되는 `type/code/status/model/request_id`로 OpenAI 업스트림 실패 사유를 확정한다.
+
+## 2026-02-21 - Empty model response 진단 및 JSON 출력 강제
+
+- 일시:
+  - 2026-02-21T16:16:48Z
+- 목표:
+  - `Empty model response` 발생 시 원인 필드를 더 정확히 확인하고, 모델 출력이 안정적으로 JSON으로 오도록 호출 포맷을 강화한다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts`의 `readOutputText`를 확장해 `refusal`, `output type`, `content type`, `status`를 수집하도록 수정했다.
+  - 텍스트가 비어 있을 때 기존 고정 메시지 대신 구조화된 진단 문자열(`status`, `output_types`, `content_types`)로 에러를 발생시키도록 변경했다.
+  - OpenAI Responses 요청에 `text.format.type = "json_object"`를 추가해 JSON 출력 형식을 강제했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- 트러블슈팅:
+  - 이슈: `/api/admin/photos/ai-suggest`에서 `{"error":"Empty model response"}` 반환.
+  - 원인: 모델 응답에 텍스트가 비어 있을 때 원인 정보가 손실되어 상세 분류가 불가능.
+  - 해결: 빈 응답의 내부 구조를 에러 메시지로 노출하고 JSON 출력 포맷을 명시해 안정성 개선.
+- 사용 기술/도구:
+  - OpenAI Responses API (`text.format`)
+  - Next.js Route Handler
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - `/admin/upload`에서 재시도 후 에러 메시지의 `status/output_types/content_types` 또는 성공 응답 여부를 확인한다.
+
+## 2026-02-21 - reasoning-only incomplete 응답 자동 재시도 추가
+
+- 일시:
+  - 2026-02-21T16:17:49Z
+- 목표:
+  - `status=incomplete` + `output_types=reasoning`로 종료되는 케이스에서 최종 JSON 출력 획득률을 높인다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts`에 `isReasoningOnlyIncomplete` 판별 함수를 추가했다.
+  - OpenAI 호출을 `requestOnce(maxOutputTokens)`로 분리해 1차 `300` 토큰 호출 후 reasoning-only incomplete면 `900` 토큰으로 1회 자동 재시도하도록 변경했다.
+  - 기존 단일 호출 에러 처리(`OpenAiRequestError`)는 유지하면서 재시도 흐름과 결합했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- 트러블슈팅:
+  - 이슈: 응답이 `{"error":"Empty model response (status=incomplete, output_types=reasoning, content_types=none)"}`로 실패.
+  - 원인: 모델이 추론 단계에서 토큰 한도에 도달해 최종 메시지(JSON)를 생성하지 못하고 중단.
+  - 해결: 해당 패턴 탐지 시 `max_output_tokens`를 확장해 1회 재시도.
+- 사용 기술/도구:
+  - OpenAI Responses API
+  - Next.js Route Handler
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - `/admin/upload`에서 동일 이미지로 재시도해 성공률을 확인하고, 필요 시 기본 `max_output_tokens` 상향 또는 reasoning 설정 추가를 검토한다.
+
+## 2026-02-21 - AI 추천 언어 정책 조정 (한글 제목/태그, 캡션 선택)
+
+- 일시:
+  - 2026-02-21T16:19:47Z
+- 목표:
+  - AI 메타데이터 추천 결과를 한글 중심으로 맞추고, 캡션 자동 생성 의존도를 낮춘다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts` 프롬프트를 조정해 제목은 한글 위주, 태그는 한글 3~8개로 요청하도록 변경했다.
+  - 같은 프롬프트에 캡션은 선택 항목이며 필요 없으면 빈 문자열을 반환하도록 명시했다.
+  - `parseSuggestion` 검증을 변경해 제목만 필수로 두고 캡션은 빈 문자열도 허용하도록 수정했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - OpenAI Responses API prompt tuning
+  - Next.js Route Handler
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - `/admin/upload`에서 AI 추천 실행 후 제목/태그의 한글 출력 품질을 확인하고, 필요 시 태그 표기 규칙(공백/하이픈) 정규화를 추가 검토한다.
+
+## 2026-02-21 - AI 추천에서 캡션 생성 제거
+
+- 일시:
+  - 2026-02-21T16:22:44Z
+- 목표:
+  - AI 추천은 제목/태그만 생성하고 캡션은 생성·반영하지 않도록 한다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts`의 응답 스키마를 `title`, `tags`로 축소했다.
+  - 같은 파일의 프롬프트에서 `caption` 키 요청 문구를 제거하고 JSON 키를 `title`, `tags`로 변경했다.
+  - `parseSuggestion`에서 캡션 파싱을 제거했다.
+  - `src/app/admin/upload/page.tsx`에서 AI 추천 결과 적용 시 캡션 값을 건드리지 않도록 `applyAiSuggestion` 로직을 수정했다.
+  - 미사용 함수(`sanitizeCaption`)를 제거하고 `npm run lint`로 검증했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - OpenAI Responses API prompt/schema tuning
+  - React state update logic
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - `/admin/upload`에서 추천 실행 시 Title/Tags만 자동 채워지고 Caption은 그대로 유지되는지 확인한다.
