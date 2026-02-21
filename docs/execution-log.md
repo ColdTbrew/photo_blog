@@ -1132,3 +1132,22 @@
   - `npm run lint`
 - 다음 액션:
   - 프로덕션에서 `/admin/upload` AI 추천 버튼으로 대용량 이미지 테스트 후 오류 재발 여부를 확인한다.
+
+## 2026-02-21 - 파일 선택 시 AI 자동 추천 비활성화
+
+- 일시:
+  - 2026-02-21T15:51:43Z
+- 목표:
+  - 이미지 선택 직후 자동으로 AI 메타데이터 추천이 실행되지 않도록 하고, 버튼 클릭 시에만 추천을 시작한다.
+- 수행 단계:
+  - `src/app/admin/upload/page.tsx`의 `onFileChange`에서 `requestAiSuggestion` 자동 호출 구문을 제거했다.
+  - 파일 선택 시에는 EXIF/해상도 추출만 수행하고, 추천은 `AI로 메타데이터 추천` 버튼에서만 실행되도록 유지했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - React (Next.js App Router, Client Component state/event handling)
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - `/admin/upload`에서 파일 선택 직후 네트워크 요청이 발생하지 않는지 확인하고, 버튼 클릭 시에만 `/api/admin/photos/ai-suggest`가 호출되는지 검증한다.

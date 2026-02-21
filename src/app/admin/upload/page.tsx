@@ -447,10 +447,6 @@ export default function AdminUploadPage() {
     if (!takenAtNone) {
       setTakenAt((prev) => prev || extracted.takenAt);
     }
-
-    if (isAuthenticated && session?.access_token) {
-      await requestAiSuggestion(nextFile, aiOverwriteExisting);
-    }
   };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
