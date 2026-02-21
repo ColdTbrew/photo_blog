@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type AdminSessionState = {
   hasAuthConfig: boolean;
@@ -33,10 +33,25 @@ function getSupabaseClient(): SupabaseClient | null {
   return cachedClient;
 }
 
+export async function getCurrentAccessToken(): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    return null;
+  }
+
+  return data.session?.access_token ?? null;
+}
+
 async function fetchAdminStatus(accessToken: string): Promise<boolean> {
   try {
     const response = await fetch("/api/admin/session", {
       method: "GET",
+      cache: "no-store",
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -58,6 +73,7 @@ export function useAdminSession(): AdminSessionState {
   const [isAdmin, setIsAdmin] = useState(false);
   const [authStatus, setAuthStatus] = useState<"idle" | "loading" | "error">("idle");
   const [authError, setAuthError] = useState<string | null>(null);
+  const syncRequestIdRef = useRef(0);
 
   const supabase = useMemo(() => getSupabaseClient(), []);
   const hasAuthConfig = Boolean(supabase);
@@ -68,8 +84,12 @@ export function useAdminSession(): AdminSessionState {
       return;
     }
 
+    syncRequestIdRef.current += 1;
+    const requestId = syncRequestIdRef.current;
     const nextIsAdmin = await fetchAdminStatus(session.access_token);
-    setIsAdmin(nextIsAdmin);
+    if (requestId === syncRequestIdRef.current) {
+      setIsAdmin(nextIsAdmin);
+    }
   };
 
   useEffect(() => {
@@ -80,18 +100,23 @@ export function useAdminSession(): AdminSessionState {
     let active = true;
 
     const syncSession = async (nextSession: Session | null) => {
+      syncRequestIdRef.current += 1;
+      const requestId = syncRequestIdRef.current;
+
       if (!active) {
         return;
       }
 
       setSession(nextSession);
       if (!nextSession?.access_token) {
-        setIsAdmin(false);
+        if (requestId === syncRequestIdRef.current) {
+          setIsAdmin(false);
+        }
         return;
       }
 
       const nextIsAdmin = await fetchAdminStatus(nextSession.access_token);
-      if (active) {
+      if (active && requestId === syncRequestIdRef.current) {
         setIsAdmin(nextIsAdmin);
       }
     };

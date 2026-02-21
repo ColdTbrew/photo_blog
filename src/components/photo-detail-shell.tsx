@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAdminSession } from "@/lib/admin-auth-client";
+import { getCurrentAccessToken, useAdminSession } from "@/lib/admin-auth-client";
 import type { Photo } from "@/types/photo";
 
 type Props = {
@@ -71,7 +71,14 @@ export function PhotoDetailShell({ photo }: Props) {
   };
 
   const onBackgroundClick: React.MouseEventHandler<HTMLElement> = (event) => {
+    if (isEditOpen || isDeleteOpen) {
+      return;
+    }
+
     const target = event.target as Node;
+    if (target instanceof Element && target.closest('[data-prevent-detail-close="true"]')) {
+      return;
+    }
 
     if (!cardRef.current?.contains(target)) {
       closeDetail();
@@ -79,7 +86,8 @@ export function PhotoDetailShell({ photo }: Props) {
   };
 
   const onSave = async () => {
-    if (!session?.access_token) {
+    const accessToken = (await getCurrentAccessToken()) ?? session?.access_token ?? null;
+    if (!accessToken) {
       setStatus({ type: "error", message: "관리자 로그인이 필요합니다." });
       return;
     }
@@ -91,7 +99,7 @@ export function PhotoDetailShell({ photo }: Props) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           title,
@@ -107,6 +115,10 @@ export function PhotoDetailShell({ photo }: Props) {
         slug?: string;
         photo?: Photo;
       };
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error("관리자 권한이 없습니다. 다시 로그인해 주세요.");
+      }
 
       if (!response.ok || !data.photo || !data.slug) {
         throw new Error(data.error ?? "수정에 실패했습니다.");
@@ -127,7 +139,8 @@ export function PhotoDetailShell({ photo }: Props) {
   };
 
   const onDelete = async () => {
-    if (!session?.access_token) {
+    const accessToken = (await getCurrentAccessToken()) ?? session?.access_token ?? null;
+    if (!accessToken) {
       setStatus({ type: "error", message: "관리자 로그인이 필요합니다." });
       return;
     }
@@ -143,11 +156,15 @@ export function PhotoDetailShell({ photo }: Props) {
       const response = await fetch(`/api/admin/photos/${current.slug}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
       const data = (await response.json()) as { error?: string; partialWarning?: string | null };
+      if (response.status === 401 || response.status === 403) {
+        throw new Error("관리자 권한이 없습니다. 다시 로그인해 주세요.");
+      }
+
       if (!response.ok) {
         throw new Error(data.error ?? "삭제에 실패했습니다.");
       }
@@ -172,7 +189,7 @@ export function PhotoDetailShell({ photo }: Props) {
       className="mx-auto min-h-screen w-full max-w-5xl px-4 pb-12 pt-8 sm:px-6 lg:px-8"
       aria-label="photo detail"
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3" data-prevent-detail-close="true">
         <Link
           href="/"
           className="inline-flex items-center gap-2 rounded-full border border-stone-300 px-4 py-2 text-sm text-stone-700 transition hover:bg-stone-100"
@@ -248,7 +265,10 @@ export function PhotoDetailShell({ photo }: Props) {
 
       {isEditOpen && (
         <section className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl space-y-4 rounded-xl bg-white p-6 shadow-xl">
+          <div
+            className="w-full max-w-2xl space-y-4 rounded-xl bg-white p-6 shadow-xl"
+            data-prevent-detail-close="true"
+          >
             <h2 className="text-xl font-semibold text-stone-900">사진 편집</h2>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -326,7 +346,10 @@ export function PhotoDetailShell({ photo }: Props) {
 
       {isDeleteOpen && (
         <section className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6 shadow-xl">
+          <div
+            className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6 shadow-xl"
+            data-prevent-detail-close="true"
+          >
             <h2 className="text-xl font-semibold text-stone-900">사진 삭제</h2>
             <p className="text-sm text-stone-700">
               이 작업은 되돌릴 수 없습니다. 확인을 위해 아래 입력에 <strong>DELETE</strong>를 입력해 주세요.

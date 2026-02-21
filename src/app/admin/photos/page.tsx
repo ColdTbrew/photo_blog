@@ -23,6 +23,7 @@ export default function AdminPhotosPage() {
     setStatus({ type: "loading" });
     try {
       const response = await fetch("/api/admin/photos", {
+        cache: "no-store",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },

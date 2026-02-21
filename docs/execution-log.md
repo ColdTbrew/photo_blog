@@ -971,3 +971,139 @@
   - `git add src/app/layout.tsx docs/execution-log.md src/app/icon.svg`
 - 다음 액션:
   - Vercel 배포 후 브라우저 강력 새로고침으로 새 SVG 탭 아이콘 반영 여부를 확인한다.
+
+## 2026-02-21 - Vercel 환경변수 동기화 + 프로덕션 재배포
+
+- 일시:
+  - 2026-02-21T00:00:00Z
+- 목표:
+  - 로컬 `.env.local`에 추가된 `OPENAI_API_KEY`, `OPENAI_VISION_MODEL` 값을 Vercel 환경(`development/preview/production`)에 반영하고 프로덕션 배포에 적용한다.
+- 수행 단계:
+  - Vercel 로그인 상태를 확인했다(`npx vercel whoami`).
+  - `.env.local` 값을 터미널 내부에서만 로드해 값 출력 없이 `OPENAI_API_KEY`, `OPENAI_VISION_MODEL`을 `development`, `preview`, `production`에 추가했다.
+  - `npx vercel --prod --yes`로 프로덕션 재배포를 실행했다.
+  - 배포 완료 후 프로덕션 URL과 alias 연결을 확인했다.
+- 트러블슈팅: 없음
+- 사용 기술/도구:
+  - Vercel CLI (`npx vercel`)
+  - 쉘 환경변수 로드(`source .env.local`)
+- 사용 메모/명령어:
+  - `npx vercel whoami`
+  - `npx vercel env add OPENAI_API_KEY <development|preview|production>`
+  - `npx vercel env add OPENAI_VISION_MODEL <development|preview|production>`
+  - `npx vercel --prod --yes`
+- 다음 액션:
+  - 프로덕션에서 OAuth 로그인/리다이렉트와 AI 제안 API 동작을 실제 계정으로 검증한다.
+
+## 2026-02-21 - 관리자 권한 불일치 대응 (Allowlist 재동기화)
+
+- 일시:
+  - 2026-02-21T00:00:00Z
+- 목표:
+  - 프로덕션에서 관리자 편집 시 권한 부족으로 차단되는 문제를 완화하기 위해 `ADMIN_ALLOWED_EMAILS`를 Vercel 환경과 재동기화하고 재배포한다.
+- 수행 단계:
+  - 로컬 `.env.local`의 `ADMIN_ALLOWED_EMAILS` 값을 출력 없이 로드했다.
+  - Vercel `development`, `preview`, `production` 환경의 `ADMIN_ALLOWED_EMAILS`를 교체 추가했다.
+  - `npx vercel --prod --yes`로 프로덕션 재배포를 실행하고 alias 반영을 확인했다.
+- 트러블슈팅: 없음
+- 사용 기술/도구:
+  - Vercel CLI (`npx vercel`)
+  - 쉘 환경변수 로드 (`source .env.local`)
+- 사용 메모/명령어:
+  - `npx vercel env add ADMIN_ALLOWED_EMAILS <development|preview|production>`
+  - `npx vercel --prod --yes`
+- 다음 액션:
+  - 대상 GitHub 계정으로 재로그인 후 `/photo/sushi`에서 상세 편집 모달 저장(PATCH) 동작을 검증한다.
+
+## 2026-02-21 - 상세 편집 권한 상태 불일치 완화
+
+- 일시:
+  - 2026-02-21T00:00:00Z
+- 목표:
+  - `/admin/photos`에서 상세 페이지로 이동한 뒤 편집/삭제 시 관리자 권한 오류가 발생하는 상태 불일치를 완화한다.
+- 수행 단계:
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/admin-auth-client.ts`의 관리자 세션 조회 요청에 `cache: "no-store"`를 추가해 stale 권한 응답 사용을 줄였다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/app/admin/photos/page.tsx` 목록 조회 요청에 `cache: "no-store"`를 추가했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/components/photo-detail-shell.tsx`에 `verifyAdminSession`을 추가하고 저장/삭제 직전에 서버 권한을 재검증하도록 반영했다.
+  - 상세 저장/삭제 API 응답이 401/403일 때 사용자에게 재로그인 안내 메시지를 명시적으로 표시하도록 에러 처리 메시지를 보강했다.
+  - lint/build 검증을 수행했다.
+- 트러블슈팅: 없음
+- 사용 기술/도구:
+  - Next.js App Router
+  - Fetch 캐시 제어 (`cache: no-store`)
+  - ESLint / Next build
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `npm run build`
+- 다음 액션:
+  - 프로덕션에서 `/admin/photos -> /photo/<slug>` 경로로 이동해 편집 저장이 정상 동작하는지 재검증한다.
+
+## 2026-02-21 - 상세 편집 토큰 최신화 적용
+
+- 일시:
+  - 2026-02-21T00:00:00Z
+- 목표:
+  - `/admin/photos -> /photo/[slug]` 경로에서 상세 편집 시 권한 오류가 발생하는 문제를 완화하기 위해 수정 요청 시 최신 access token을 사용한다.
+- 수행 단계:
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/admin-auth-client.ts`에 `getCurrentAccessToken()` 헬퍼를 추가해 클라이언트에서 최신 세션 토큰을 직접 조회할 수 있게 했다.
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/components/photo-detail-shell.tsx`에서 저장/삭제 요청 직전에 `getCurrentAccessToken()`으로 토큰을 다시 가져오도록 수정했다.
+  - 상세 페이지의 사전 `/api/admin/session` 재검증 호출을 제거해 false negative 가능성을 줄였다.
+  - lint/build 검증 후 프로덕션 재배포를 수행했다.
+- 트러블슈팅: 없음
+- 사용 기술/도구:
+  - Supabase 클라이언트 세션 조회
+  - Next.js App Router
+  - ESLint / Next build
+  - Vercel CLI
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `npm run build`
+  - `npx vercel --prod --yes`
+- 다음 액션:
+  - 프로덕션에서 동일 경로로 상세 편집 저장을 재검증하고, 실패 시 PATCH 응답의 상태코드/본문 에러를 확인한다.
+
+## 2026-02-21 - 관리자 세션 상태 레이스 방지
+
+- 일시:
+  - 2026-02-21T00:00:00Z
+- 목표:
+  - 관리자 페이지/상세 페이지 전환 중 `isAdmin` 상태가 잘못 false로 덮이는 비동기 레이스를 방지한다.
+- 수행 단계:
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/lib/admin-auth-client.ts`에 요청 시퀀스(`syncRequestIdRef`)를 추가했다.
+  - `onAuthStateChange` 동기화와 `refreshAdminStatus`에서 최신 요청 결과만 반영하도록 가드 조건을 추가했다.
+  - lint/build 검증 후 프로덕션 재배포를 수행했다.
+- 트러블슈팅: 없음
+- 사용 기술/도구:
+  - React `useRef` 기반 비동기 레이스 가드
+  - ESLint / Next build
+  - Vercel CLI
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `npm run build`
+  - `npx vercel --prod --yes`
+- 다음 액션:
+  - `/admin/photos -> 상세/수정` 흐름에서 편집 저장 권한 오류 재발 여부를 확인한다.
+
+## 2026-02-21 - 상세 Edit 클릭 시 뒤로 이동되는 버그 수정
+
+- 일시:
+  - 2026-02-21T00:00:00Z
+- 목표:
+  - 상세 페이지의 `Edit/Delete` 클릭이 배경 클릭으로 오인되어 이전 페이지(`/admin/photos`)로 돌아가는 동작을 수정한다.
+- 수행 단계:
+  - `/Users/coldbrew/Documents/photo_blog/photo_blog/src/components/photo-detail-shell.tsx`의 배경 클릭 핸들러를 수정했다.
+  - 편집/삭제 모달이 열린 상태에서는 배경 닫기 로직이 실행되지 않도록 가드했다.
+  - 상단 액션 영역과 모달 컨테이너에 `data-prevent-detail-close="true"`를 추가하고, 해당 영역 클릭은 상세 닫기 로직에서 제외했다.
+  - lint/build 검증 후 프로덕션 재배포를 수행했다.
+- 트러블슈팅: 없음
+- 사용 기술/도구:
+  - React 이벤트 처리
+  - Next.js App Router
+  - ESLint / Next build
+  - Vercel CLI
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `npm run build`
+  - `npx vercel --prod --yes`
+- 다음 액션:
+  - `/admin/photos -> 상세/수정 -> Edit` 클릭 시 더 이상 목록으로 돌아가지 않는지 확인한다.
