@@ -31,6 +31,46 @@ function toDateValue(input: string | null): string {
   return parsed.toISOString().slice(0, 10);
 }
 
+function formatExifNumber(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "";
+  }
+  if (Number.isInteger(value)) {
+    return String(value);
+  }
+  return value.toFixed(1).replace(/\.0$/, "");
+}
+
+function formatExposureTime(value: string | null | undefined): string {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) {
+    return "";
+  }
+  return /s$/i.test(trimmed) ? trimmed : `${trimmed}s`;
+}
+
+function buildExifSummary(photo: Photo): string {
+  const parts: string[] = [];
+
+  if (photo.exifMake) parts.push(photo.exifMake);
+  if (photo.exifModel) parts.push(photo.exifModel);
+  if (photo.exifLensModel) parts.push(photo.exifLensModel);
+
+  const iso = formatExifNumber(photo.exifIso);
+  if (iso) parts.push(`ISO ${iso}`);
+
+  const focalLength = formatExifNumber(photo.exifFocalLengthMm);
+  if (focalLength) parts.push(`${focalLength}mm`);
+
+  const fNumber = formatExifNumber(photo.exifFNumber);
+  if (fNumber) parts.push(`F${fNumber}`);
+
+  const exposureTime = formatExposureTime(photo.exifExposureTime);
+  if (exposureTime) parts.push(exposureTime);
+
+  return parts.join(" · ");
+}
+
 export function PhotoDetailShell({ photo }: Props) {
   const router = useRouter();
   const cardRef = useRef<HTMLElement | null>(null);
@@ -47,6 +87,7 @@ export function PhotoDetailShell({ photo }: Props) {
   const [caption, setCaption] = useState(photo.caption);
   const [tags, setTags] = useState(photo.tags.join(", "));
   const [takenAt, setTakenAt] = useState(toDateValue(photo.takenAt));
+  const exifSummary = buildExifSummary(current);
 
   useEffect(() => {
     setCurrent(photo);
@@ -238,6 +279,8 @@ export function PhotoDetailShell({ photo }: Props) {
           </div>
 
           <p className="text-base text-stone-700">{current.caption}</p>
+
+          {exifSummary && <p className="text-sm text-stone-600">{exifSummary}</p>}
 
           <ul className="flex flex-wrap gap-2">
             {current.tags.map((tag) => (

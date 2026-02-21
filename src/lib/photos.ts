@@ -16,6 +16,13 @@ type PhotoRow = {
   tags: string[];
   taken_at: string | null;
   created_at: string;
+  exif_make: string | null;
+  exif_model: string | null;
+  exif_lens_model: string | null;
+  exif_iso: number | null;
+  exif_focal_length_mm: number | null;
+  exif_f_number: number | null;
+  exif_exposure_time: string | null;
 };
 
 function normalizeLimit(limit?: number): number {
@@ -68,6 +75,13 @@ function mapRowToPhoto(row: PhotoRow): Photo {
     tags: row.tags,
     takenAt: row.taken_at,
     createdAt: row.created_at,
+    exifMake: row.exif_make,
+    exifModel: row.exif_model,
+    exifLensModel: row.exif_lens_model,
+    exifIso: row.exif_iso,
+    exifFocalLengthMm: row.exif_focal_length_mm,
+    exifFNumber: row.exif_f_number,
+    exifExposureTime: row.exif_exposure_time,
   };
 }
 
@@ -82,7 +96,9 @@ async function getAllPhotosFromSupabase(): Promise<Photo[]> {
 
   const { data, error } = await client
     .from("photos")
-    .select("id, slug, src, storage_path, width, height, title, caption, tags, taken_at, created_at")
+    .select(
+      "id, slug, src, storage_path, width, height, title, caption, tags, taken_at, created_at, exif_make, exif_model, exif_lens_model, exif_iso, exif_focal_length_mm, exif_f_number, exif_exposure_time"
+    )
     .order("created_at", { ascending: false })
     .order("slug", { ascending: true });
 

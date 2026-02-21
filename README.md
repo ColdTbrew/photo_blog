@@ -75,13 +75,15 @@ npm run dev
 
 1. Supabase SQL Editor에서 `supabase/migrations/0001_create_photos.sql` 실행
 2. Supabase SQL Editor에서 `supabase/migrations/0002_add_photo_exif_columns.sql` 실행 (EXIF 컬럼)
-3. (초기 1회) 메타데이터 import (`data/photos.json`이 있을 때):
+3. Supabase SQL Editor에서 `supabase/migrations/0003_make_taken_at_nullable.sql` 실행
+4. Supabase SQL Editor에서 `supabase/migrations/0004_add_photo_exif_lens_iso_columns.sql` 실행 (렌즈/ISO 컬럼)
+5. (초기 1회) 메타데이터 import (`data/photos.json`이 있을 때):
 
 ```bash
 npm run supabase:import:photos
 ```
 
-4. 스토리지 업로드 + DB `src` URL 동기화:
+6. 스토리지 업로드 + DB `src` URL 동기화:
 
 ```bash
 npm run supabase:sync:storage

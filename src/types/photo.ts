@@ -9,6 +9,13 @@ export type Photo = {
   tags: string[];
   takenAt: string | null;
   createdAt: string;
+  exifMake?: string | null;
+  exifModel?: string | null;
+  exifLensModel?: string | null;
+  exifIso?: number | null;
+  exifFocalLengthMm?: number | null;
+  exifFNumber?: number | null;
+  exifExposureTime?: string | null;
 };
 
 export type PhotoListResponse = {

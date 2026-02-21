@@ -92,7 +92,9 @@ export async function PATCH(request: Request, context: RouteContext) {
         slug: nextSlug,
       })
       .eq("slug", slug)
-      .select("id, slug, src, width, height, title, caption, tags, taken_at, created_at")
+      .select(
+        "id, slug, src, width, height, title, caption, tags, taken_at, created_at, exif_make, exif_model, exif_lens_model, exif_iso, exif_focal_length_mm, exif_f_number, exif_exposure_time"
+      )
       .single();
 
     if (error) {
@@ -122,6 +124,13 @@ export async function PATCH(request: Request, context: RouteContext) {
         tags: data.tags,
         takenAt: data.taken_at,
         createdAt: data.created_at,
+        exifMake: data.exif_make,
+        exifModel: data.exif_model,
+        exifLensModel: data.exif_lens_model,
+        exifIso: data.exif_iso,
+        exifFocalLengthMm: data.exif_focal_length_mm,
+        exifFNumber: data.exif_f_number,
+        exifExposureTime: data.exif_exposure_time,
       },
     });
   } catch (error) {

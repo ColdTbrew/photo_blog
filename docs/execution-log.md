@@ -1373,3 +1373,30 @@
   - `npm run lint`
 - 다음 액션:
   - `/admin/upload`, `/admin/photos`에서 홈 아이콘 버튼 클릭 시 `/`로 즉시 이동하는지 확인한다.
+
+## 2026-02-21 - 상세 페이지 EXIF 촬영 정보 표시 확장
+
+- 일시:
+  - 2026-02-21T16:38:14Z
+- 목표:
+  - 사진 상세 페이지에서 태그 위에 EXIF 기반 촬영 정보(브랜드/모델/렌즈/ISO/초점거리/조리개/셔터속도)를 표시한다.
+- 수행 단계:
+  - `supabase/migrations/0004_add_photo_exif_lens_iso_columns.sql`를 추가해 `exif_lens_model`, `exif_iso` 컬럼을 확장했다.
+  - `src/app/admin/upload/page.tsx`의 EXIF 폼 상태/자동 추출 로직에 `lensModel`, `iso`를 추가하고 업로드 `FormData`에 포함했다.
+  - `src/app/admin/photos/route.ts`에서 `exifLensModel`, `exifIso`를 파싱해 DB insert 및 응답 select에 반영했다.
+  - `src/lib/photos.ts`와 `src/types/photo.ts`에 EXIF 필드를 추가해 상세 페이지 데이터 경로를 확장했다.
+  - `src/app/api/admin/photos/[slug]/route.ts`의 PATCH 응답 select에 EXIF 필드를 포함해 상세 수정 후 상태 일관성을 맞췄다.
+  - `src/components/photo-detail-shell.tsx`에 EXIF 요약 문자열 빌더를 추가하고 태그 리스트 위에 표시하도록 렌더링을 추가했다.
+  - `README.md`의 Supabase 마이그레이션 실행 순서를 최신 파일 기준으로 업데이트했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js App Router / React
+  - Supabase Postgres migrations
+  - Supabase Storage + Admin API routes
+  - exifr
+  - ESLint
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - Supabase SQL Editor에서 `supabase/migrations/0004_add_photo_exif_lens_iso_columns.sql`를 적용한 뒤 신규 업로드 이미지 상세 화면에서 EXIF 요약 표시를 확인한다.

@@ -29,6 +29,8 @@ type ExifFormState = {
   lastUsedAt: string;
   make: string;
   model: string;
+  lensModel: string;
+  iso: string;
   colorSpace: string;
   colorProfile: string;
   focalLengthMm: string;
@@ -68,6 +70,8 @@ const EMPTY_EXIF: ExifFormState = {
   lastUsedAt: "",
   make: "",
   model: "",
+  lensModel: "",
+  iso: "",
   colorSpace: "",
   colorProfile: "",
   focalLengthMm: "",
@@ -103,6 +107,13 @@ function toBooleanSelectValue(value: unknown): BooleanSelect {
 function toOptionalNumberText(value: unknown): string {
   if (typeof value === "number" && Number.isFinite(value)) {
     return String(value);
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? String(parsed) : "";
+  }
+  if (Array.isArray(value) && value.length > 0) {
+    return toOptionalNumberText(value[0]);
   }
   return "";
 }
@@ -256,6 +267,10 @@ async function extractExifFormState(file: File): Promise<ExifFormState> {
       ...initial,
       make: typeof parsed.Make === "string" ? parsed.Make : "",
       model: typeof parsed.Model === "string" ? parsed.Model : "",
+      lensModel: String(firstDefined(parsed.LensModel, parsed.Lens, parsed.LensInfo) ?? "").trim(),
+      iso: toOptionalNumberText(
+        firstDefined(parsed.ISO, parsed.ISOSpeedRatings, parsed.PhotographicSensitivity)
+      ),
       colorSpace: mapColorSpace(parsed.ColorSpace),
       colorProfile: typeof colorProfile === "string" ? colorProfile : "",
       focalLengthMm: toOptionalNumberText(parsed.FocalLength),
@@ -495,6 +510,8 @@ export default function AdminUploadPage() {
       formData.set("exifLastUsedAt", exif.lastUsedAt);
       formData.set("exifMake", exif.make);
       formData.set("exifModel", exif.model);
+      formData.set("exifLensModel", exif.lensModel);
+      formData.set("exifIso", exif.iso);
       formData.set("exifColorSpace", exif.colorSpace);
       formData.set("exifColorProfile", exif.colorProfile);
       formData.set("exifFocalLengthMm", exif.focalLengthMm);
@@ -807,6 +824,28 @@ export default function AdminUploadPage() {
               <input
                 value={exif.model}
                 onChange={(e) => setExif((prev) => ({ ...prev, model: e.target.value }))}
+                className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none ring-stone-900 focus:ring"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-stone-700">Lens Model</span>
+              <input
+                value={exif.lensModel}
+                onChange={(e) => setExif((prev) => ({ ...prev, lensModel: e.target.value }))}
+                className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none ring-stone-900 focus:ring"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-stone-700">ISO</span>
+              <input
+                type="number"
+                min={1}
+                step="1"
+                value={exif.iso}
+                onChange={(e) => setExif((prev) => ({ ...prev, iso: e.target.value }))}
                 className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none ring-stone-900 focus:ring"
               />
             </label>

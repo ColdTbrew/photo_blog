@@ -108,7 +108,9 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase
     .from("photos")
-    .select("id, slug, src, width, height, title, caption, tags, taken_at, created_at")
+    .select(
+      "id, slug, src, width, height, title, caption, tags, taken_at, created_at, exif_make, exif_model, exif_lens_model, exif_iso, exif_focal_length_mm, exif_f_number, exif_exposure_time"
+    )
     .order("created_at", { ascending: false })
     .order("slug", { ascending: true });
 
@@ -128,6 +130,13 @@ export async function GET(request: Request) {
       tags: row.tags,
       takenAt: row.taken_at,
       createdAt: row.created_at,
+      exifMake: row.exif_make,
+      exifModel: row.exif_model,
+      exifLensModel: row.exif_lens_model,
+      exifIso: row.exif_iso,
+      exifFocalLengthMm: row.exif_focal_length_mm,
+      exifFNumber: row.exif_f_number,
+      exifExposureTime: row.exif_exposure_time,
     })),
   });
 }
@@ -159,6 +168,8 @@ export async function POST(request: Request) {
     const exifLastUsedAtRaw = String(formData.get("exifLastUsedAt") ?? "");
     const exifMakeRaw = String(formData.get("exifMake") ?? "");
     const exifModelRaw = String(formData.get("exifModel") ?? "");
+    const exifLensModelRaw = String(formData.get("exifLensModel") ?? "");
+    const exifIsoRaw = String(formData.get("exifIso") ?? "");
     const exifColorSpaceRaw = String(formData.get("exifColorSpace") ?? "");
     const exifColorProfileRaw = String(formData.get("exifColorProfile") ?? "");
     const exifFocalLengthRaw = String(formData.get("exifFocalLengthMm") ?? "");
@@ -179,6 +190,8 @@ export async function POST(request: Request) {
     const exifLastUsedAt = parseOptionalDateTime(exifLastUsedAtRaw, "exifLastUsedAt");
     const exifMake = parseOptionalText(exifMakeRaw);
     const exifModel = parseOptionalText(exifModelRaw);
+    const exifLensModel = parseOptionalText(exifLensModelRaw);
+    const exifIso = parseOptionalNumber(exifIsoRaw, "exifIso");
     const exifColorSpace = parseOptionalText(exifColorSpaceRaw);
     const exifColorProfile = parseOptionalText(exifColorProfileRaw);
     const exifFocalLengthMm = parseOptionalNumber(exifFocalLengthRaw, "exifFocalLengthMm");
@@ -241,6 +254,8 @@ export async function POST(request: Request) {
       exif_last_used_at: exifLastUsedAt,
       exif_make: exifMake,
       exif_model: exifModel,
+      exif_lens_model: exifLensModel,
+      exif_iso: exifIso,
       exif_color_space: exifColorSpace,
       exif_color_profile: exifColorProfile,
       exif_focal_length_mm: exifFocalLengthMm,
