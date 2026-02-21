@@ -210,7 +210,11 @@ export async function POST(request: Request) {
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(fileName, bytes, { upsert: false, contentType });
+      .upload(fileName, bytes, {
+        upsert: false,
+        contentType,
+        cacheControl: "31536000",
+      });
 
     if (uploadError) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });

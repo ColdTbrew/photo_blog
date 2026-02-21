@@ -1151,3 +1151,21 @@
   - `npm run lint`
 - 다음 액션:
   - `/admin/upload`에서 파일 선택 직후 네트워크 요청이 발생하지 않는지 확인하고, 버튼 클릭 시에만 `/api/admin/photos/ai-suggest`가 호출되는지 검증한다.
+
+## 2026-02-21 - 업로드 이미지 장기 캐시 헤더 적용
+
+- 일시:
+  - 2026-02-21T15:53:44Z
+- 목표:
+  - 페이지 재방문 시 이미지 로딩 속도를 높이기 위해 브라우저 캐시 재사용률을 높인다.
+- 수행 단계:
+  - `src/app/api/admin/photos/route.ts`의 Supabase Storage 업로드 옵션에 `cacheControl: "31536000"`을 추가했다.
+  - 타임스탬프 포함 파일명과 결합되어 immutable 성격의 장기 캐시 운용이 가능하도록 정리했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Supabase Storage upload options (`cacheControl`)
+  - Next.js API Route
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 신규 업로드 이미지에 대해 브라우저 DevTools 네트워크에서 `Cache-Control` 응답/재방문시 캐시 히트 여부를 확인한다.
