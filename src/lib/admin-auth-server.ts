@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 export type AdminAuthResult =
@@ -21,6 +22,25 @@ function getRequiredEnv(name: string): string {
 function getOptionalEnv(name: string): string | null {
   const value = process.env[name];
   return value ? value : null;
+}
+
+function parseBooleanEnv(name: string): boolean {
+  const value = getOptionalEnv(name);
+  if (!value) {
+    return false;
+  }
+
+  return value.trim().toLowerCase() === "true";
+}
+
+function safeTokenEquals(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return timingSafeEqual(left, right);
 }
 
 function parseAllowedEmails(raw: string): Set<string> {
@@ -61,12 +81,13 @@ export async function authorizeAdminRequest(
   options?: AuthorizeOptions
 ): Promise<AdminAuthResult> {
   const allowLegacyToken = options?.allowLegacyToken ?? false;
+  const legacyTokenEnabled = parseBooleanEnv("ADMIN_UPLOAD_LEGACY_TOKEN_ENABLED");
 
-  if (allowLegacyToken) {
+  if (allowLegacyToken && legacyTokenEnabled) {
     const legacyToken = getOptionalEnv("ADMIN_UPLOAD_TOKEN");
     const formToken = String(options?.formData?.get("token") ?? "").trim();
 
-    if (legacyToken && formToken && formToken === legacyToken) {
+    if (legacyToken && formToken && safeTokenEquals(formToken, legacyToken)) {
       return { ok: true, email: "legacy-token" };
     }
   }

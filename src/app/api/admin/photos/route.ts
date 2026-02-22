@@ -4,6 +4,31 @@ import { invalidatePhotosCache } from "@/lib/photos";
 import { authorizeAdminRequest, createServiceRoleClient } from "@/lib/admin-auth-server";
 
 const BUCKET = "photos";
+const DEFAULT_MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/avif",
+  "image/tiff",
+]);
+
+function getMaxUploadSizeBytes(): number {
+  const value = process.env.ADMIN_UPLOAD_MAX_FILE_SIZE_BYTES;
+  if (!value) {
+    return DEFAULT_MAX_UPLOAD_SIZE_BYTES;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_MAX_UPLOAD_SIZE_BYTES;
+  }
+
+  return Math.floor(parsed);
+}
 
 function sanitizeFileBaseName(name: string): string {
   return name.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-").toLowerCase();
@@ -143,6 +168,18 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const maxUploadSizeBytes = getMaxUploadSizeBytes();
+    const contentLengthHeader = request.headers.get("content-length");
+    if (contentLengthHeader) {
+      const contentLength = Number(contentLengthHeader);
+      if (Number.isFinite(contentLength) && contentLength > maxUploadSizeBytes + 1024 * 1024) {
+        return NextResponse.json(
+          { error: `file is too large (max ${maxUploadSizeBytes} bytes)` },
+          { status: 413 }
+        );
+      }
+    }
+
     const formData = await request.formData();
 
     const authResult = await authorizeAdminRequest(request, {
@@ -156,6 +193,17 @@ export async function POST(request: Request) {
     const file = formData.get("file");
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "file is required" }, { status: 400 });
+    }
+    if (file.size > maxUploadSizeBytes) {
+      return NextResponse.json(
+        { error: `file is too large (max ${maxUploadSizeBytes} bytes)` },
+        { status: 413 }
+      );
+    }
+
+    const mimeType = file.type.toLowerCase();
+    if (!ALLOWED_IMAGE_TYPES.has(mimeType)) {
+      return NextResponse.json({ error: "unsupported file type" }, { status: 400 });
     }
 
     const slugRaw = String(formData.get("slug") ?? "").trim();

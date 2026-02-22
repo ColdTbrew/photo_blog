@@ -1,5 +1,15 @@
 # Execution Log
 
+## 2026-02-22 - AGENTS.md에 글로벌 에이전트 규칙 추가
+
+- 목표: Workflow Orchestration, Task Management, Core Principles를 AGENTS.md에 반영.
+- 수행 단계:
+  - AGENTS.md 하단에 다음 섹션 추가: Workflow Orchestration (Plan Mode, Subagent Strategy, Self-Improvement Loop, Verification Before Done, Demand Elegance, Autonomous Bug Fixing), Task Management (tasks/todo.md, tasks/lessons.md), Core Principles (Simplicity First, No Laziness, Minimal Impact).
+- 트러블슈팅: none.
+- 사용 기술/도구: 편집기.
+- 사용 메모/명령어: 없음.
+- 다음 액션: 필요 시 tasks/todo.md, tasks/lessons.md 디렉터리/파일 생성.
+
 ## 2026-02-18 - Supabase Migration Kickoff (Phase 1)
 
 - 목표: 시작 Supabase migration and enforce a reusable study log process in-repo.
@@ -1400,3 +1410,138 @@
   - `npm run lint`
 - 다음 액션:
   - Supabase SQL Editor에서 `supabase/migrations/0004_add_photo_exif_lens_iso_columns.sql`를 적용한 뒤 신규 업로드 이미지 상세 화면에서 EXIF 요약 표시를 확인한다.
+
+## 2026-02-22 - Cursor 터미널 폰트 설정 적용
+
+- 일시:
+  - 2026-02-22T07:44:30Z
+- 목표:
+  - Antigravity에서 사용 중인 폰트와 동일하게 Cursor 터미널 폰트를 맞추고, GPU 관련 설정은 변경하지 않는다.
+- 수행 단계:
+  - Antigravity 사용자 설정에서 사용 중인 폰트 값을 확인했다 (`JetBrainsMonoNL Nerd Font Mono`).
+  - Cursor 사용자 설정에 `terminal.integrated.fontFamily`를 추가했다.
+  - 설정 파일을 다시 읽어 폰트 키가 반영되었는지 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Cursor settings.json 편집
+  - `perl` one-liner
+- 사용 메모/명령어:
+  - `perl -0pi -e '...terminal.integrated.fontFamily...' <cursor-user-settings>`
+  - `cat <cursor-user-settings>`
+- 다음 액션:
+  - Cursor를 재시작한 뒤 통합 터미널에서 한글/아이콘 글리프가 정상 표시되는지 확인한다.
+
+## 2026-02-22 - Cursor 에디터 폰트 Antigravity와 동기화
+
+- 일시:
+  - 2026-02-22T07:47:00Z
+- 목표:
+  - Cursor 에디터 폰트를 Antigravity와 동일한 값으로 맞춘다.
+- 수행 단계:
+  - Antigravity 사용자 설정에서 `editor.fontFamily` 값을 재확인했다.
+  - Cursor 사용자 설정에 동일한 `editor.fontFamily`를 추가했다.
+  - 설정 파일을 재확인해 `editor.fontFamily`와 기존 `terminal.integrated.fontFamily`가 함께 유지되는지 검증했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Cursor settings.json 편집
+  - `perl` one-liner
+- 사용 메모/명령어:
+  - `perl -0pi -e '...editor.fontFamily...' <cursor-user-settings>`
+  - `cat <cursor-user-settings>`
+- 다음 액션:
+  - Cursor 재시작 후 에디터/터미널 모두 동일한 폰트로 렌더링되는지 확인한다.
+
+## 2026-02-22 - VS Code 터미널 Nerd Font 동기화 (Antigravity 기준)
+
+- 일시:
+  - 2026-02-22T08:02:32Z
+- 목표:
+  - Antigravity에서 사용 중인 폰트 값을 VS Code 프로젝트 설정으로 그대로 가져와 통합 터미널에 Nerd Font가 적용되도록 맞춘다.
+- 수행 단계:
+  - Antigravity 사용자 설정 파일에서 폰트 문자열을 확인했다.
+  - `.vscode/settings.json` 파일을 생성했다.
+  - `editor.fontFamily`와 `terminal.integrated.fontFamily`에 동일한 폰트 문자열(`'JetBrainsMonoNL Nerd Font Mono', Menlo, Monaco, 'Courier New', monospace`)을 적용했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - VS Code workspace settings (`.vscode/settings.json`)
+  - shell (`cat`, `mkdir`)
+- 사용 메모/명령어:
+  - `cat "$HOME/Library/Application Support/Antigravity/User/settings.json"`
+  - `mkdir -p .vscode`
+  - `cat > .vscode/settings.json <<'EOF' ... EOF`
+- 다음 액션:
+  - VS Code에서 해당 워크스페이스를 다시 열거나 통합 터미널을 새로 생성해 Nerd Font 아이콘 글리프가 정상 표시되는지 확인한다.
+
+## 2026-02-22 - VS Code/Cursor 사용자 폰트 동시 동기화
+
+- 일시:
+  - 2026-02-22T08:04:27Z
+- 목표:
+  - VS Code와 Cursor 모두 Antigravity 기준 Nerd Font 값을 동일하게 적용해 에디터/통합 터미널 폰트를 일치시킨다.
+- 수행 단계:
+  - Cursor 사용자 설정과 VS Code 사용자 설정의 현재 폰트 상태를 확인했다.
+  - 두 설정 파일의 `editor.fontFamily`, `terminal.integrated.fontFamily`를 동일한 값으로 갱신했다.
+  - 저장 후 두 파일을 다시 읽어 값이 반영되었는지 검증했다.
+- Troubleshooting:
+  - issue: 샌드박스 권한으로 사용자 설정 파일 쓰기가 거부되었다.
+  - cause: 사용자 설정 파일 경로가 워크스페이스 쓰기 허용 범위 밖이었다.
+  - fix: 승인된 권한 상승 모드로 동일 명령을 재실행해 변경을 완료했다.
+- 사용 기술/도구:
+  - VS Code/Cursor 사용자 설정 (`settings.json`)
+  - shell (`cat`, here-doc)
+- 사용 메모/명령어:
+  - `cat "$HOME/Library/Application Support/Cursor/User/settings.json"`
+  - `cat "$HOME/Library/Application Support/Code/User/settings.json"`
+  - `cat > ".../User/settings.json" <<'EOF' ... EOF`
+- 다음 액션:
+  - VS Code와 Cursor를 각각 재시작하거나 통합 터미널을 새로 열어 Nerd Font 아이콘 글리프 표시 상태를 최종 확인한다.
+
+## 2026-02-22 - 프로젝트 로컬 VS Code 폰트 설정 제거
+
+- 일시:
+  - 2026-02-22T08:06:21Z
+- 목표:
+  - 사용자 전역 설정과 중복되는 프로젝트 로컬 VS Code 폰트 설정을 정리한다.
+- 수행 단계:
+  - `.vscode/settings.json`을 삭제했다.
+  - `.vscode` 디렉터리가 비어 있어 함께 정리했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - shell (`rm`, `rmdir`)
+- 사용 메모/명령어:
+  - `rm -f .vscode/settings.json`
+  - `rmdir .vscode`
+- 다음 액션:
+  - VS Code/Cursor에서 전역 사용자 설정만으로 폰트가 동일하게 유지되는지 확인한다.
+
+## 2026-02-22 - 보안 패치 브랜치 검증 및 main 안전 통합
+
+- 일시:
+  - 2026-02-22T08:10:20Z
+- 목표:
+  - `security-audit-patch-20260220` 브랜치의 보안 변경을 검증하고, 회귀 없이 `main`에 통합한다.
+- 수행 단계:
+  - `main..security-audit-patch-20260220` 커밋/파일 diff를 확인해 변경 범위를 검증했다.
+  - 브랜치가 `main`의 최신 기능 커밋들 이전에서 분기되어 직접 머지 시 대규모 롤백 위험이 있음을 확인했다.
+  - 보안 핵심 변경을 `main` 코드 구조에 맞게 반영했다:
+    - `src/lib/admin-auth-server.ts`: 레거시 토큰 fallback 환경변수 게이트(`ADMIN_UPLOAD_LEGACY_TOKEN_ENABLED`) 추가, 토큰 비교를 `timingSafeEqual` 기반 상수시간 비교로 변경.
+    - `src/app/api/admin/photos/route.ts`: 업로드 요청의 최대 크기(`ADMIN_UPLOAD_MAX_FILE_SIZE_BYTES`, 기본 25MB) 및 MIME allowlist 검증 추가.
+    - `src/app/api/photos/[slug]/download/route.ts`: 다운로드 소스 URL을 Supabase `photos` public 경로로 제한하고, `Content-Disposition` 파일명을 안전 문자열로 정제.
+    - `.env.example`, `README.md`: 신규 보안 설정/동작 문서화.
+  - `npm run lint`, `npm run build`로 검증했다.
+- Troubleshooting:
+  - issue: 보안 브랜치를 그대로 머지하면 최신 기능이 광범위하게 제거될 수 있었다.
+  - cause: 보안 브랜치가 `7720825`에서 분기된 뒤 `main`에 누적된 다수 기능 커밋을 포함하지 못한 상태였다.
+  - fix: 보안 변경만 `main`에 수동 이식 후 정적검사/빌드 검증으로 안전 통합했다.
+- 사용 기술/도구:
+  - Git (`log`, `diff`, `merge-base`)
+  - Next.js Route Handlers
+  - Node crypto (`timingSafeEqual`)
+  - ESLint / Next build
+- 사용 메모/명령어:
+  - `git log --oneline main..security-audit-patch-20260220`
+  - `git diff --stat main..security-audit-patch-20260220`
+  - `npm run lint`
+  - `npm run build`
+- 다음 액션:
+  - 보안 통합 커밋 후, 필요 시 `security-audit-patch-20260220`를 최신 `main` 기준으로 정리(또는 병합 완료 처리)한다.

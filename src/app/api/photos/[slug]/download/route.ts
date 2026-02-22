@@ -20,6 +20,30 @@ function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
+function isTrustedPhotoSource(src: string): boolean {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) {
+    return false;
+  }
+
+  try {
+    const trusted = new URL(supabaseUrl);
+    const candidate = new URL(src);
+    return (
+      candidate.protocol === trusted.protocol &&
+      candidate.hostname === trusted.hostname &&
+      candidate.pathname.startsWith("/storage/v1/object/public/photos/")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function toSafeDownloadFilename(slug: string): string {
+  const safe = slug.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+  return safe || "photo";
+}
+
 export async function GET(request: Request, { params }: Params) {
   try {
     const { slug } = await params;
@@ -28,6 +52,9 @@ export async function GET(request: Request, { params }: Params) {
 
     if (!photo) {
       return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+    }
+    if (!isTrustedPhotoSource(photo.src)) {
+      return NextResponse.json({ error: "Untrusted photo source" }, { status: 502 });
     }
 
     const upstream = await fetch(photo.src, {
@@ -53,7 +80,7 @@ export async function GET(request: Request, { params }: Params) {
       status: 200,
       headers: {
         "Content-Type": "image/avif",
-        "Content-Disposition": `attachment; filename="${photo.slug}.avif"`,
+        "Content-Disposition": `attachment; filename="${toSafeDownloadFilename(photo.slug)}.avif"`,
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=31536000, immutable",
       },
