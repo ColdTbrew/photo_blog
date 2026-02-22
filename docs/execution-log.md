@@ -1545,3 +1545,23 @@
   - `npm run build`
 - 다음 액션:
   - 보안 통합 커밋 후, 필요 시 `security-audit-patch-20260220`를 최신 `main` 기준으로 정리(또는 병합 완료 처리)한다.
+
+## 2026-02-22 - 보안 브랜치 병합 완료 및 원격 반영
+
+- 일시:
+  - 2026-02-22T08:12:18Z
+- 목표:
+  - 보안 패치 통합 결과를 `main`에 확정하고 원격 저장소까지 반영한다.
+- 수행 단계:
+  - 보안 통합 커밋(`be8d439`)을 생성했다.
+  - 구형 분기였던 `security-audit-patch-20260220`는 회귀 방지를 위해 `ours` 전략으로 병합 커밋(`0f47eb6`) 처리했다.
+  - `git push origin main`으로 원격 `main`에 반영했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Git (`commit`, `merge -s ours`, `push`)
+- 사용 메모/명령어:
+  - `git commit -m "security: harden admin upload auth and download source validation"`
+  - `git merge --no-ff -s ours security-audit-patch-20260220 -m "merge: integrate security-audit-patch-20260220 without regressions"`
+  - `git push origin main`
+- 다음 액션:
+  - 프로덕션/프리뷰 환경에서 관리자 업로드(허용 MIME/파일크기), 다운로드(비신뢰 URL 차단) 동작을 실제 요청으로 확인한다.
