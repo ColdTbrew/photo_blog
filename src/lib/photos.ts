@@ -99,6 +99,7 @@ async function getAllPhotosFromSupabase(): Promise<Photo[]> {
     .select(
       "id, slug, src, storage_path, width, height, title, caption, tags, taken_at, created_at, exif_make, exif_model, exif_lens_model, exif_iso, exif_focal_length_mm, exif_f_number, exif_exposure_time"
     )
+    .order("taken_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .order("slug", { ascending: true });
 

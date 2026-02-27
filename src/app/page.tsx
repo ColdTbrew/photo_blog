@@ -6,28 +6,34 @@ export default async function Home() {
   const initialPage = await getPhotosPage({ limit: 15 });
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
-      <header className="mb-10 border-b border-stone-200 pb-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Lightlog</p>
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-stone-900 sm:text-5xl">
-              Lightlog by Coldbrew
+    <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-12 pt-12 sm:px-6 lg:px-8">
+      <header className="mb-12 border-b border-stone-200/60 pb-8 animate-fade-in-up">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">
+              Lightlog
+            </p>
+            <h1 className="text-4xl font-semibold tracking-tighter text-stone-900 sm:text-5xl lg:text-6xl">
+              Lightlog <span className="text-stone-400 font-light italic">by</span> Coldbrew
             </h1>
-            <p className="mt-3 max-w-2xl text-base text-stone-600">
+            <p className="max-w-xl text-base font-medium leading-relaxed text-stone-500 sm:text-lg">
               사진들로 기억을 남긴 갤러리입니다.
             </p>
           </div>
 
-          <AdminAuthActions />
+          <div className="pb-1 sm:pb-2">
+            <AdminAuthActions />
+          </div>
         </div>
       </header>
 
-      <MasonryFeed
-        initialItems={initialPage.items}
-        initialHasMore={initialPage.hasMore}
-        initialNextCursor={initialPage.nextCursor}
-      />
+      <div className="animate-fade-in-up delay-300">
+        <MasonryFeed
+          initialItems={initialPage.items}
+          initialHasMore={initialPage.hasMore}
+          initialNextCursor={initialPage.nextCursor}
+        />
+      </div>
     </main>
   );
 }
