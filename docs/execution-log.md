@@ -1565,3 +1565,153 @@
   - `git push origin main`
 - 다음 액션:
   - 프로덕션/프리뷰 환경에서 관리자 업로드(허용 MIME/파일크기), 다운로드(비신뢰 URL 차단) 동작을 실제 요청으로 확인한다.
+
+## 2026-02-27 - 피드 카드 호버 가독성 개선 (텍스트 박스 적용)
+
+- 일시:
+  - 2026-02-27T22:29:59+0900 (KST)
+- 목표:
+  - 사진 카드 호버 시 배경을 과도하게 어둡게 하는 대신, 제목/캡션/액션 버튼 영역을 박스화해 밝은 사진에서도 가독성을 확보한다.
+- 수행 단계:
+  - `src/components/photo-card.tsx`의 호버 오버레이를 `from-black/80` 중심 구조에서 `from-black/55` 기반으로 완화했다.
+  - 상단 좋아요/다운로드 버튼을 반투명 다크 박스(`bg-black/45`, blur, border, shadow) 안에 배치해 버튼 대비를 높였다.
+  - 하단 제목/캡션을 반투명 다크 텍스트 박스(`bg-black/60`, border, blur, shadow)로 감싸 밝은 이미지 위에서도 문구가 안정적으로 읽히도록 조정했다.
+  - `npm run lint`를 실행해 정적 검사 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js/React 컴포넌트
+  - Tailwind CSS (`bg-black/*`, `backdrop-blur`, `shadow`)
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 실제 피드 화면에서 밝은 톤/역광 사진을 기준으로 텍스트 박스 불투명도와 패딩을 최종 미세조정한다.
+
+## 2026-02-27 - 피드 카드 글래스 박스 미세조정 (버튼 원복 + 타이틀/캡션 분리)
+
+- 일시:
+  - 2026-02-27T22:32:06+0900 (KST)
+- 목표:
+  - 사진을 가리는 면적을 줄이기 위해 상단 액션 버튼은 기존 형태로 되돌리고, 하단 제목/설명은 각각 분리된 글로시(리퀴드 글라스 느낌) 박스로 조정한다.
+- 수행 단계:
+  - `src/components/photo-card.tsx`에서 상단 좋아요/다운로드 버튼을 감싸던 컨테이너를 제거해 버튼 스타일을 기존(`bg-white/20`, `border-white/30`)으로 원복했다.
+  - 호버 오버레이를 `from-black/45 via-black/10`으로 완화해 이미지 가림을 줄였다.
+  - 하단 텍스트 영역을 단일 박스에서 분리해 제목/캡션 각각 독립된 글래스 박스(`bg-white/12`, `bg-white/10`, `backdrop-blur-xl`, inset highlight shadow`)로 변경했다.
+  - `npm run lint`로 정적 검사를 통과했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js/React 컴포넌트
+  - Tailwind CSS (`backdrop-blur`, glass-like border/shadow 조합)
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 실제 화면에서 모바일/데스크톱 각각 글래스 박스의 blur 강도와 border 밝기를 확인하고 필요 시 단계별(`bg-white/8~14`)로 추가 미세조정한다.
+
+## 2026-02-27 - 글래스 텍스트 박스 정렬 보정 및 크기 축소
+
+- 일시:
+  - 2026-02-27T22:33:59+0900 (KST)
+- 목표:
+  - 제목/설명 글래스 박스가 가로로 어긋나 보이는 문제를 해소하고, 전체 박스 크기를 줄여 사진 가림을 최소화한다.
+- 수행 단계:
+  - `src/components/photo-card.tsx` 하단 텍스트 영역을 `inline-block` 기반에서 `flex flex-col items-start` 구조로 변경해 세로 정렬을 고정했다.
+  - 제목/설명 박스의 패딩과 라운딩을 축소(`rounded-2xl` → `rounded-xl`, `px/py` 축소)해 시각적 점유 면적을 줄였다.
+  - 최대 너비를 축소(`title: 72%`, `caption: 84%`)해 카드 이미지 노출 면적을 확대했다.
+  - `npm run lint`를 실행해 정적 검사 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js/React 컴포넌트
+  - Tailwind CSS (`flex`, `max-w`, glass shadow/border)
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 피드 실화면에서 긴 제목/긴 캡션 사례를 확인하고, 필요 시 `max-w` 비율을 카드 폭 기준으로 추가 보정한다.
+
+## 2026-02-27 - 글래스 텍스트 박스 폰트 다운스케일
+
+- 일시:
+  - 2026-02-27T22:35:16+0900 (KST)
+- 목표:
+  - 텍스트 박스 자체 크기 변경 없이 제목/설명 폰트만 줄여 시각적 밀도를 낮춘다.
+- 수행 단계:
+  - `src/components/photo-card.tsx`에서 제목 폰트를 `text-base`에서 `text-sm`으로 조정했다.
+  - 설명(캡션) 폰트를 `text-sm`에서 `text-xs`로 조정했다.
+  - `npm run lint`로 정적 검사 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js/React 컴포넌트
+  - Tailwind CSS 타이포그래피 유틸리티
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 실제 카드에서 텍스트 길이가 긴 항목의 가독성을 확인하고 필요 시 `leading` 값을 추가 조정한다.
+
+## 2026-02-27 - Next.js Turbopack panic 대응 (dev 스크립트 우회)
+
+- 일시:
+  - 2026-02-27T22:44:41+0900 (KST)
+- 목표:
+  - `next dev` 실행 시 발생한 Turbopack 내부 panic(`static_sorted_file.rs`)으로 개발 서버가 시작되지 않는 문제를 우회해 즉시 개발을 재개한다.
+- 수행 단계:
+  - 사용자 제공 panic 로그를 확인해 앱 코드가 아닌 Turbopack 내부 오류(`range start index ... out of range`)임을 확인했다.
+  - `package.json`의 `dev` 스크립트를 `next dev --webpack`으로 변경해 기본 개발 서버를 webpack 경로로 고정했다.
+  - 필요 시 Turbopack을 선택적으로 실행할 수 있도록 `dev:turbo` 스크립트(`next dev --turbopack`)를 추가했다.
+  - `npm run lint`로 정적 검사 통과를 확인했다.
+- Troubleshooting:
+  - issue: 이 실행 환경에서는 포트 바인딩 권한 제한으로 실제 dev 서버 기동 상태를 직접 검증할 수 없었다.
+  - cause: 샌드박스 실행 정책상 `0.0.0.0:3000` listen이 차단되었다.
+  - fix: 정적 변경(스크립트/린트) 중심으로 안정 우회 구성을 적용하고, 로컬 환경에서 `npm run dev` 재실행 검증을 후속 액션으로 분리했다.
+- 사용 기술/도구:
+  - Next.js CLI (`--webpack`, `--turbopack`)
+  - npm scripts
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run dev`
+  - `npm run dev:turbo`
+  - `npm run lint`
+- 다음 액션:
+  - 로컬 터미널에서 `npm run dev`로 정상 기동 확인 후, Turbopack 수정 릴리스 확인 시 `npm run dev:turbo`로 재검증한다.
+
+## 2026-02-27 - dev 스크립트 원복 (사용자 요청)
+
+- 일시:
+  - 2026-02-27T22:46:52+0900 (KST)
+- 목표:
+  - 캐시 삭제 후 Turbopack 재시도를 전제로, `package.json`의 개발 스크립트를 원래 상태로 되돌린다.
+- 수행 단계:
+  - `package.json`의 `scripts.dev`를 `next dev --webpack`에서 `next dev`로 원복했다.
+  - 임시로 추가했던 `dev:turbo` 스크립트를 제거해 원래 구성과 동일하게 맞췄다.
+  - `npm run lint`를 실행해 정적 검사 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - npm scripts (`package.json`)
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 로컬에서 `rm -rf .next && npm run dev -- --turbopack` 또는 `npm run dev`로 실제 기동을 확인한다.
+
+## 2026-02-27 - 호버 글래스 오버레이 전환 부드럽게 개선
+
+- 일시:
+  - 2026-02-27T22:53:50+0900 (KST)
+- 목표:
+  - 마우스 오버 시 글래스 텍스트 박스가 갑자기 바뀌어 보이던(렉처럼 느껴지는) 전환을 완화한다.
+- 수행 단계:
+  - `src/components/photo-card.tsx`에서 오버레이를 배경 레이어와 콘텐츠 레이어로 분리했다.
+  - 배경 그라디언트 강도를 완화(`from-black/35`, `via-black/8`)하고 페이드 시간을 늘려 변화량을 줄였다.
+  - 제목/설명 글래스 박스에 개별 `opacity + translate` 트랜지션을 적용하고, 캡션에 짧은 지연을 추가해 동시 점멸 느낌을 줄였다.
+  - `backdrop-blur-xl`을 `backdrop-blur-md`로 낮춰 렌더링 부담과 순간적인 “팝” 체감을 완화했다.
+  - `npm run lint`로 정적 검사 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js/React 컴포넌트
+  - Tailwind CSS transition/blur 유틸리티
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 실제 브라우저에서 hover in/out 반복 시 전환 잔상/버벅임이 남는지 확인하고, 필요 시 duration/delay를 20~40ms 단위로 추가 미세조정한다.

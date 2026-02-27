@@ -52,7 +52,7 @@ function fromSnapshotValue(value: string): LikeSnapshot {
 
 function subscribeToLikes(onStoreChange: () => void) {
   if (typeof window === "undefined") {
-    return () => {};
+    return () => { };
   }
 
   const onStorage = (event: StorageEvent) => {
@@ -103,57 +103,67 @@ export function PhotoCard({ photo }: Props) {
   };
 
   return (
-    <article className="group relative mb-4 break-inside-avoid">
-      <Link href={`/photo/${photo.slug}`} className="block">
+    <article className="group relative mb-4 break-inside-avoid overflow-hidden ring-1 ring-stone-900/5 shadow-sm bg-stone-100">
+      <Link href={`/photo/${photo.slug}`} className="block overflow-hidden">
         <Image
           src={photo.src}
           alt={photo.title}
           width={photo.width}
           height={photo.height}
-          className="h-auto w-full object-cover"
+          className="h-auto w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           loading="lazy"
           decoding="async"
           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
       </Link>
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-black/0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
-        <div className="pointer-events-auto flex items-start justify-between p-3">
-          <button
-            type="button"
-            aria-label={liked ? "좋아요 취소" : "좋아요"}
-            onClick={toggleLike}
-            className="inline-flex h-9 items-center gap-1 rounded-full bg-white/92 px-3 text-stone-700 shadow-sm transition hover:bg-white"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              aria-hidden
-              className={`h-5 w-5 ${liked ? "fill-red-500 stroke-red-500" : "fill-transparent stroke-stone-700"}`}
-            >
-              <path
-                d="M12 21s-6.7-4.35-9.33-8.2C.7 9.95 1.35 6.1 4.8 4.75c2.2-.86 4.26.04 5.47 1.67C11.48 4.79 13.54 3.9 15.74 4.75c3.45 1.35 4.1 5.2 2.13 8.05C15.24 16.65 12 21 12 21Z"
-                strokeWidth="1.5"
-              />
-            </svg>
-            <span className="text-xs font-semibold tabular-nums">{likeCount}</span>
-          </button>
+      <div className="pointer-events-none absolute inset-0 z-10">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/8 to-transparent opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100 group-focus-within:opacity-100" />
 
-          <a
-            href={`/api/photos/${photo.slug}/download`}
-            aria-label="사진 다운로드"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/92 text-stone-700 shadow-sm transition hover:bg-white"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
-              <path d="M12 3v11" />
-              <path d="m7.5 10.5 4.5 4.5 4.5-4.5" />
-              <path d="M4 18.5h16" />
-            </svg>
-          </a>
+        <div className="relative flex h-full flex-col justify-between p-4">
+          <div className="pointer-events-auto flex items-start justify-between opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 group-focus-within:opacity-100">
+            <button
+              type="button"
+              aria-label={liked ? "좋아요 취소" : "좋아요"}
+              onClick={toggleLike}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 px-3.5 text-white/95 shadow-sm transition hover:bg-white/30"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden
+                className={`h-5 w-5 ${liked ? "fill-red-500 stroke-red-500" : "fill-transparent stroke-white drop-shadow-sm"}`}
+              >
+                <path
+                  d="M12 21s-6.7-4.35-9.33-8.2C.7 9.95 1.35 6.1 4.8 4.75c2.2-.86 4.26.04 5.47 1.67C11.48 4.79 13.54 3.9 15.74 4.75c3.45 1.35 4.1 5.2 2.13 8.05C15.24 16.65 12 21 12 21Z"
+                  strokeWidth="1.5"
+                />
+              </svg>
+              <span className="text-xs font-semibold tabular-nums drop-shadow-md">{likeCount}</span>
+            </button>
+
+            <a
+              href={`/api/photos/${photo.slug}/download`}
+              aria-label="사진 다운로드"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white/95 shadow-sm transition hover:bg-white/30"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5 fill-none stroke-current drop-shadow-sm" strokeWidth="1.8">
+                <path d="M12 3v11" />
+                <path d="m7.5 10.5 4.5 4.5 4.5-4.5" />
+                <path d="M4 18.5h16" />
+              </svg>
+            </a>
+          </div>
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 space-y-1 p-3 text-white">
-          <h2 className="text-sm font-semibold tracking-tight">{photo.title}</h2>
-          <p className="line-clamp-2 text-xs text-white/90">{photo.caption}</p>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 text-white">
+          <div className="flex flex-col items-start gap-1.5">
+            <h2 className="max-w-[72%] rounded-xl border border-white/35 bg-white/12 px-3 py-1.5 text-sm font-bold tracking-tight text-white backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_22px_rgba(0,0,0,0.3)] drop-shadow-md opacity-0 translate-y-1 transition-all duration-300 ease-out will-change-[opacity,transform] group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+              {photo.title}
+            </h2>
+            <p className="max-w-[84%] rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs font-medium text-white/95 leading-relaxed backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_8px_20px_rgba(0,0,0,0.28)] drop-shadow-md line-clamp-2 opacity-0 translate-y-1 transition-all duration-300 ease-out [transition-delay:40ms] will-change-[opacity,transform] group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+              {photo.caption}
+            </p>
+          </div>
         </div>
       </div>
     </article>
