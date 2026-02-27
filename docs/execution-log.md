@@ -1715,3 +1715,24 @@
   - `npm run lint`
 - 다음 액션:
   - 실제 브라우저에서 hover in/out 반복 시 전환 잔상/버벅임이 남는지 확인하고, 필요 시 duration/delay를 20~40ms 단위로 추가 미세조정한다.
+
+## 2026-02-27 - 잔여 로컬 변경 일괄 커밋 정리
+
+- 일시:
+  - 2026-02-27T22:56:48+0900 (KST)
+- 목표:
+  - 워크트리에 남아 있던 수정/신규 파일을 사용자 요청에 따라 전부 커밋해 작업 상태를 정리한다.
+- 수행 단계:
+  - `git status --short`로 잔여 변경 파일을 확인했다.
+  - `git add -A`로 수정/신규 파일 전체를 스테이징했다.
+  - `git commit -m "chore: commit all remaining local changes"`로 일괄 커밋했다.
+  - 커밋에 포함된 파일: `src/app/globals.css`, `src/app/page.tsx`, `src/lib/photos.ts`, `.vscode/settings.json`, `next`, `photo_blog@0.1.0`, `tasks/lessons.md`, `tasks/todo.md`.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Git (`status`, `add`, `commit`)
+- 사용 메모/명령어:
+  - `git status --short`
+  - `git add -A`
+  - `git commit -m "chore: commit all remaining local changes"`
+- 다음 액션:
+  - 필요 시 원격 반영을 위해 `git push origin main`을 실행한다.
