@@ -103,7 +103,7 @@ export function PhotoCard({ photo }: Props) {
   };
 
   return (
-    <article className="group relative mb-4 break-inside-avoid overflow-hidden ring-1 ring-stone-900/5 shadow-sm bg-stone-100">
+    <article className="group relative self-start overflow-hidden ring-1 ring-stone-900/5 shadow-sm bg-stone-100">
       <Link href={`/photo/${photo.slug}`} className="block overflow-hidden">
         <Image
           src={photo.src}
@@ -157,10 +157,10 @@ export function PhotoCard({ photo }: Props) {
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 text-white">
           <div className="flex flex-col items-start gap-1.5">
-            <h2 className="max-w-[72%] rounded-xl border border-white/35 bg-white/12 px-3 py-1.5 text-sm font-bold tracking-tight text-white backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_22px_rgba(0,0,0,0.3)] drop-shadow-md opacity-0 translate-y-1 transition-all duration-300 ease-out will-change-[opacity,transform] group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            <h2 className="max-w-[72%] rounded-xl border border-white/35 bg-white/12 px-3 py-1.5 text-sm font-bold tracking-tight text-white backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_22px_rgba(0,0,0,0.3)] drop-shadow-md opacity-0 transition-opacity duration-180 ease-out group-hover:opacity-100 group-focus-within:opacity-100">
               {photo.title}
             </h2>
-            <p className="max-w-[84%] rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs font-medium text-white/95 leading-relaxed backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_8px_20px_rgba(0,0,0,0.28)] drop-shadow-md line-clamp-2 opacity-0 translate-y-1 transition-all duration-300 ease-out [transition-delay:40ms] will-change-[opacity,transform] group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            <p className="max-w-[84%] rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs font-medium text-white/95 leading-relaxed backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_8px_20px_rgba(0,0,0,0.28)] drop-shadow-md line-clamp-2 opacity-0 transition-opacity duration-180 ease-out group-hover:opacity-100 group-focus-within:opacity-100">
               {photo.caption}
             </p>
           </div>

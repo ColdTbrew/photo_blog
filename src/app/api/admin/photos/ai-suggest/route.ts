@@ -6,6 +6,8 @@ const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
 
 type AiSuggestion = {
   title: string;
+  slug: string;
+  caption: string;
   tags: string[];
 };
 
@@ -152,6 +154,21 @@ function sanitizeTitle(value: unknown): string {
   return normalized.slice(0, 120);
 }
 
+function sanitizeCaption(value: unknown): string {
+  const normalized = safeString(value).replace(/\s+/g, " ");
+  return normalized.slice(0, 220);
+}
+
+function sanitizeSlug(value: unknown): string {
+  return safeString(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
 function sanitizeTags(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -159,7 +176,12 @@ function sanitizeTags(value: unknown): string[] {
 
   const dedup = new Set<string>();
   for (const item of value) {
-    const tag = safeString(item).toLowerCase().replace(/\s+/g, "-");
+    const tag = safeString(item)
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
     if (!tag) continue;
     if (tag.length > 32) continue;
     dedup.add(tag);
@@ -192,13 +214,21 @@ function parseSuggestion(raw: unknown): AiSuggestion {
 
   const obj = raw as Record<string, unknown>;
   const title = sanitizeTitle(obj.title);
+  const slug = sanitizeSlug(obj.slug);
+  const caption = sanitizeCaption(obj.caption);
   const tags = sanitizeTags(obj.tags);
 
   if (!title) {
     throw new Error("Suggestion missing title");
   }
+  if (!slug) {
+    throw new Error("Suggestion missing slug");
+  }
+  if (!caption) {
+    throw new Error("Suggestion missing caption");
+  }
 
-  return { title, tags };
+  return { title, slug, caption, tags };
 }
 
 function readOutputText(payload: Record<string, unknown>): string {
@@ -290,9 +320,12 @@ async function callVisionModel(file: File): Promise<AiSuggestion> {
                 type: "input_text",
                 text: [
                   "Analyze this photo and suggest metadata for a photo blog.",
-                  "Respond as strict JSON object with keys: title (string), tags (string[]).",
+                  "Respond as strict JSON object with keys: title (string), slug (string), caption (string), tags (string[]).",
                   "Title should be primarily in Korean.",
-                  "Tags should be Korean words/phrases and 3-8 items.",
+                  "Keep title short (max 24 chars).",
+                  "Slug must be English only, lowercase, and kebab-case for URL path.",
+                  "Caption should be one concise Korean sentence (max 70 chars).",
+                  "Tags must be English only, lowercase, kebab-case words/phrases, 3-5 items.",
                   "No markdown, no explanation, JSON only.",
                 ].join(" "),
               },
@@ -342,7 +375,8 @@ async function callVisionModel(file: File): Promise<AiSuggestion> {
     return raw;
   };
 
-  const tokenBudgets = [300, 900, 1800];
+  // Keep first attempt cheap, but allow larger retries to avoid incomplete reasoning-only responses.
+  const tokenBudgets = [240, 640, 1400];
   let lastError: Error | null = null;
 
   for (const maxTokens of tokenBudgets) {
@@ -358,7 +392,8 @@ async function callVisionModel(file: File): Promise<AiSuggestion> {
       lastError = error;
 
       const isJsonParseIssue = error.message.includes("Model did not return valid JSON");
-      const shouldRetry = isIncompleteStatus(raw) || isJsonParseIssue;
+      const isEmptyResponseIssue = error.message.includes("Empty model response");
+      const shouldRetry = isIncompleteStatus(raw) || isJsonParseIssue || isEmptyResponseIssue;
       if (!shouldRetry || maxTokens === tokenBudgets[tokenBudgets.length - 1]) {
         throw error;
       }

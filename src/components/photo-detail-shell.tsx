@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import NextImage from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getCurrentAccessToken, useAdminSession } from "@/lib/admin-auth-client";
@@ -11,17 +11,43 @@ type Props = {
   photo: Photo;
 };
 
+type AiSuggestion = {
+  title: string;
+  slug: string;
+  caption: string;
+  tags: string[];
+};
+
+type AiSuggestErrorResponse = {
+  error?: string;
+  model?: string;
+  openaiStatus?: number;
+  openaiType?: string;
+  openaiCode?: string;
+  openaiParam?: string;
+  openaiRequestId?: string;
+};
+
 type Status =
   | { type: "idle" }
   | { type: "loading" }
   | { type: "error"; message: string }
   | { type: "success"; message: string };
 
+const AI_IMAGE_MAX_DIMENSION = 256;
+const AI_IMAGE_JPEG_QUALITY = 0.82;
+const AI_IMAGE_TARGET_MIME = "image/jpeg";
+
 function parseTagsInput(raw: string): string[] {
-  return raw
-    .split(",")
+  const dedup = new Set(
+    raw
+    .replace(/\r\n/g, "\n")
+    .split(/[\n,]/)
     .map((value) => value.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+  );
+
+  return [...dedup];
 }
 
 function toDateValue(input: string | null): string {
@@ -71,6 +97,59 @@ function buildExifSummary(photo: Photo): string {
   return parts.join(" · ");
 }
 
+async function createAiSuggestionImage(file: File): Promise<File> {
+  if (typeof window === "undefined" || !file.type.startsWith("image/")) {
+    return file;
+  }
+
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("이미지 로드에 실패했습니다."));
+      img.src = sourceUrl;
+    });
+
+    const originalWidth = image.naturalWidth || 0;
+    const originalHeight = image.naturalHeight || 0;
+    if (originalWidth <= 0 || originalHeight <= 0) {
+      return file;
+    }
+
+    const maxSide = Math.max(originalWidth, originalHeight);
+    const scale = maxSide > AI_IMAGE_MAX_DIMENSION ? AI_IMAGE_MAX_DIMENSION / maxSide : 1;
+    const targetWidth = Math.max(1, Math.round(originalWidth * scale));
+    const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return file;
+    }
+    context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, AI_IMAGE_TARGET_MIME, AI_IMAGE_JPEG_QUALITY);
+    });
+    if (!blob) {
+      return file;
+    }
+
+    const lastDot = file.name.lastIndexOf(".");
+    const baseName = lastDot > 0 ? file.name.slice(0, lastDot) : file.name;
+    return new File([blob], `${baseName}-ai.jpg`, {
+      type: AI_IMAGE_TARGET_MIME,
+      lastModified: Date.now(),
+    });
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 export function PhotoDetailShell({ photo }: Props) {
   const router = useRouter();
   const cardRef = useRef<HTMLElement | null>(null);
@@ -81,6 +160,7 @@ export function PhotoDetailShell({ photo }: Props) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [status, setStatus] = useState<Status>({ type: "idle" });
+  const [aiSuggestStatus, setAiSuggestStatus] = useState<Status>({ type: "idle" });
 
   const [title, setTitle] = useState(photo.title);
   const [slug, setSlug] = useState(photo.slug);
@@ -100,7 +180,67 @@ export function PhotoDetailShell({ photo }: Props) {
     setIsDeleteOpen(false);
     setDeleteConfirmText("");
     setStatus({ type: "idle" });
+    setAiSuggestStatus({ type: "idle" });
   }, [photo]);
+
+  const onResuggest = async () => {
+    const accessToken = (await getCurrentAccessToken()) ?? session?.access_token ?? null;
+    if (!accessToken) {
+      setAiSuggestStatus({ type: "error", message: "AI 재추천은 관리자 로그인 후 사용할 수 있습니다." });
+      return;
+    }
+
+    setAiSuggestStatus({ type: "loading" });
+
+    try {
+      const sourceResponse = await fetch(current.src);
+      if (!sourceResponse.ok) {
+        throw new Error("원본 이미지를 불러오지 못했습니다.");
+      }
+
+      const sourceBlob = await sourceResponse.blob();
+      const sourceMimeType = sourceBlob.type || "image/jpeg";
+      const sourceFile = new File([sourceBlob], `${current.slug}.jpg`, {
+        type: sourceMimeType,
+        lastModified: Date.now(),
+      });
+      const aiFile = await createAiSuggestionImage(sourceFile);
+
+      const formData = new FormData();
+      formData.set("file", aiFile);
+
+      const response = await fetch("/api/admin/photos/ai-suggest", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+
+      const data = (await response.json()) as (AiSuggestion & AiSuggestErrorResponse);
+      if (!response.ok) {
+        const details = [
+          typeof data.openaiStatus === "number" ? `status=${data.openaiStatus}` : "",
+          data.openaiType ? `type=${data.openaiType}` : "",
+          data.openaiCode ? `code=${data.openaiCode}` : "",
+          data.openaiParam ? `param=${data.openaiParam}` : "",
+          data.model ? `model=${data.model}` : "",
+          data.openaiRequestId ? `request_id=${data.openaiRequestId}` : "",
+        ].filter(Boolean);
+        const message = data.error ?? "AI 재추천에 실패했습니다.";
+        throw new Error(details.length ? `${message} (${details.join(", ")})` : message);
+      }
+
+      setTitle(data.title ?? "");
+      setSlug(data.slug ?? "");
+      setCaption(data.caption ?? "");
+      setTags(Array.isArray(data.tags) ? data.tags.join(", ") : "");
+      setAiSuggestStatus({ type: "success", message: "제목/슬러그/캡션/태그를 AI 추천값으로 업데이트했습니다." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "알 수 없는 오류";
+      setAiSuggestStatus({ type: "error", message });
+    }
+  };
 
   const closeDetail = () => {
     if (window.history.length > 1) {
@@ -259,7 +399,7 @@ export function PhotoDetailShell({ photo }: Props) {
       </div>
 
       <article ref={cardRef} className="mt-6 bg-white shadow-sm ring-1 ring-stone-200">
-        <Image
+        <NextImage
           src={current.src}
           alt={current.title}
           width={current.width}
@@ -314,6 +454,28 @@ export function PhotoDetailShell({ photo }: Props) {
           >
             <h2 className="text-xl font-semibold text-stone-900">사진 편집</h2>
 
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => void onResuggest()}
+                disabled={aiSuggestStatus.type === "loading" || status.type === "loading"}
+                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-700 transition hover:bg-stone-100 disabled:opacity-60"
+              >
+                {aiSuggestStatus.type === "loading" ? "AI 재추천 중..." : "AI로 제목/태그 재추천"}
+              </button>
+            </div>
+
+            {aiSuggestStatus.type === "error" && (
+              <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {aiSuggestStatus.message}
+              </p>
+            )}
+            {aiSuggestStatus.type === "success" && (
+              <p className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {aiSuggestStatus.message}
+              </p>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-stone-700">Title</span>
@@ -350,9 +512,12 @@ export function PhotoDetailShell({ photo }: Props) {
                 <input
                   value={tags}
                   onChange={(event) => setTags(event.target.value)}
-                  placeholder="comma,separated,tags"
+                  placeholder="쉼표 또는 줄바꿈으로 태그 구분"
                   className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm"
                 />
+                <span className="mt-1 block text-xs text-stone-500">
+                  예: `샌프란시스코, 워터프론트` 또는 줄바꿈으로 여러 태그 입력
+                </span>
               </label>
 
               <label className="block">

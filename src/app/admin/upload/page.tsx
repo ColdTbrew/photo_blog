@@ -49,6 +49,8 @@ type ExtractedMetadata = {
 
 type AiSuggestion = {
   title: string;
+  slug: string;
+  caption: string;
   tags: string[];
 };
 
@@ -62,7 +64,7 @@ type AiSuggestErrorResponse = {
   openaiRequestId?: string;
 };
 
-const AI_IMAGE_MAX_DIMENSION = 1000;
+const AI_IMAGE_MAX_DIMENSION = 256;
 const AI_IMAGE_JPEG_QUALITY = 0.82;
 const AI_IMAGE_TARGET_MIME = "image/jpeg";
 
@@ -405,6 +407,8 @@ export default function AdminUploadPage() {
 
   const applyAiSuggestion = (suggestion: AiSuggestion, overwrite: boolean) => {
     setTitle((prev) => (overwrite || !prev.trim() ? suggestion.title : prev));
+    setSlug((prev) => (overwrite || !prev.trim() ? suggestion.slug : prev));
+    setCaption((prev) => (overwrite || !prev.trim() ? suggestion.caption : prev));
     setTags((prev) => (overwrite || !prev.trim() ? suggestion.tags.join(", ") : prev));
   };
 

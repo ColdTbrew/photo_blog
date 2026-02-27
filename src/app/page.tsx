@@ -1,4 +1,5 @@
 import { AdminAuthActions } from "@/components/admin-auth-actions";
+import { HomeNavDrawer } from "@/components/home-nav-drawer";
 import { MasonryFeed } from "@/components/masonry-feed";
 import { getPhotosPage } from "@/lib/photos";
 
@@ -10,9 +11,12 @@ export default async function Home() {
       <header className="mb-12 border-b border-stone-200/60 pb-8 animate-fade-in-up">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">
-              Lightlog
-            </p>
+            <div className="flex items-center gap-3">
+              <HomeNavDrawer />
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">
+                Lightlog
+              </p>
+            </div>
             <h1 className="text-4xl font-semibold tracking-tighter text-stone-900 sm:text-5xl lg:text-6xl">
               Lightlog <span className="text-stone-400 font-light italic">by</span> Coldbrew
             </h1>

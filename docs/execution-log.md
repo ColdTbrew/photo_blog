@@ -1736,3 +1736,184 @@
   - `git commit -m "chore: commit all remaining local changes"`
 - 다음 액션:
   - 필요 시 원격 반영을 위해 `git push origin main`을 실행한다.
+
+## 2026-02-27 - 피드 카드 정렬/매칭 체감 이슈 완화 (Masonry -> Grid)
+
+- 일시:
+  - 2026-02-27T23:01:56+0900 (KST)
+- 목표:
+  - 피드에서 카드 높이/정렬이 어긋나 보이고, 호버 시 제목·설명이 다른 카드와 섞여 보이는 체감을 줄인다.
+- 수행 단계:
+  - `src/components/masonry-feed.tsx`의 레이아웃을 CSS `columns`에서 `grid`(`grid-cols-1/sm:2/xl:3`)로 전환해 시각 순서를 고정했다.
+  - `src/components/photo-card.tsx`에서 `mb-4`, `break-inside-avoid`를 제거해 Grid 간격 체계와 맞췄다.
+  - 제목/설명 글래스 박스 트랜지션에서 `translate`와 지연을 제거하고, `opacity` 중심의 짧은 전환(`duration-180`)으로 조정해 카드 간 잔상 체감을 줄였다.
+  - `npm run lint`로 정적 검사 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - React/Next.js 컴포넌트
+  - Tailwind CSS (`grid`, transition)
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 실제 화면에서 카드 순서/정렬 체감이 개선되었는지 확인하고, 필요 시 `gap`과 breakpoint별 칼럼 수를 추가 조정한다.
+
+## 2026-02-27 - 상세 편집창 AI 재추천 + 태그 수정 UX 보강
+
+- 일시:
+  - 2026-02-27T23:07:33+0900 (KST)
+- 목표:
+  - 상세 사진 편집 모달에서 제목/태그를 다시 추천받을 수 있게 하고, 태그 수동 수정이 더 확실히 반영되도록 입력 파싱 UX를 개선한다.
+- 수행 단계:
+  - `src/components/photo-detail-shell.tsx`에 `AI로 제목/태그 재추천` 버튼과 상태 메시지(로딩/성공/실패)를 추가했다.
+  - 현재 사진 `src`를 클라이언트에서 가져와 축소 JPEG로 변환한 뒤 `/api/admin/photos/ai-suggest`로 보내도록 상세 편집 전용 추천 요청 로직을 구현했다.
+  - 추천 성공 시 편집 폼의 `title`, `tags` 입력값을 즉시 갱신하도록 연결했다.
+  - 태그 파서를 개선해 `쉼표`와 `줄바꿈` 모두 태그 구분자로 허용하고, 중복 태그를 제거하도록 수정했다.
+  - `Tags` 입력란 placeholder/help 텍스트를 보강해 사용자가 직접 수정하는 방법을 명확히 안내했다.
+  - `npm run lint`로 정적 검사 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - React/Next.js 클라이언트 컴포넌트
+  - Fetch/FormData, Canvas 이미지 축소 처리
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 상세 페이지 편집 모달에서 AI 재추천 후 수동 태그 수정(쉼표/줄바꿈) 저장이 기대대로 반영되는지 실브라우저에서 확인한다.
+
+## 2026-02-27 - 상세 편집창 AI 재추천 런타임 오류 수정
+
+- 일시:
+  - 2026-02-27T23:08:27+0900 (KST)
+- 목표:
+  - `AI로 제목/태그 재추천` 클릭 시 발생한 `Object is not a constructor` 런타임 오류를 해결한다.
+- 수행 단계:
+  - 원인을 확인했다: `src/components/photo-detail-shell.tsx`에서 `next/image`의 `Image` 컴포넌트 이름이 브라우저 `Image` 생성자 사용(`new Image()`)과 충돌했다.
+  - `next/image` import 별칭을 `NextImage`로 변경했다.
+  - 이미지 축소 로직에서 생성자를 `new window.Image()`로 명시해 전역 브라우저 생성자를 확실히 사용하도록 수정했다.
+  - `npm run lint`로 정적 검사 통과를 확인했다.
+- Troubleshooting:
+  - issue: AI 재추천 버튼 클릭 시 `Object is not a constructor` 에러로 추천 흐름이 중단되었다.
+  - cause: 동일 스코프에서 `Image` 심볼이 React 컴포넌트로 바인딩되어 전역 생성자 호출이 덮어써졌다.
+  - fix: 컴포넌트/전역 생성자 심볼을 분리(`NextImage`, `window.Image`)해 충돌을 제거했다.
+- 사용 기술/도구:
+  - Next.js client component
+  - 브라우저 이미지 API (`window.Image`)
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 상세 편집 모달에서 AI 재추천 버튼을 재실행해 제목/태그 자동 채움이 정상 동작하는지 확인한다.
+
+## 2026-02-27 - AI 재추천 메타데이터 확장 및 비용 최적화
+
+- 일시:
+  - 2026-02-27T23:13:26+0900 (KST)
+- 목표:
+  - 상세/업로드 편집에서 AI 재추천 결과에 slug/caption까지 포함하고, 태그를 영어로 통일하면서 응답 비용 증가를 억제한다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts` 응답 스키마를 `title`, `slug`, `caption`, `tags`로 확장했다.
+  - 같은 파일의 프롬프트를 갱신해:
+    - 제목: 한국어(짧게)
+    - slug: 영어 kebab-case
+    - caption: 한국어 한 문장
+    - tags: 영어 lowercase kebab-case
+    를 명시했다.
+  - 서버 정제 로직에서 `slug`/`caption` 검증을 추가하고, 태그는 영문자/숫자/하이픈만 허용하도록 강화했다.
+  - 비용 절감을 위해 `max_output_tokens` 재시도 예산을 `300/900/1800`에서 `180/360/720`으로 축소했다.
+  - `src/app/admin/upload/page.tsx`에서 AI 추천 결과를 `title/slug/caption/tags` 모두 폼에 반영하도록 수정했다.
+  - `src/components/photo-detail-shell.tsx`의 AI 재추천도 `title/slug/caption/tags` 모두 업데이트하도록 연결했다.
+  - 태그 수동 편집 파서를 보강해 쉼표/줄바꿈 구분 및 중복 제거를 적용했다.
+  - `npm run lint`로 정적 검사 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js Route Handler / Client Component
+  - OpenAI Responses API 프롬프트/출력 정제
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 편집 모달에서 AI 재추천 실행 후 slug/caption/tags 반영 결과와 응답 지연/품질의 균형을 실사용 기준으로 점검한다.
+
+## 2026-02-27 - AI 추천 incomplete 응답 회귀 수정
+
+- 일시:
+  - 2026-02-27T23:16:03+0900 (KST)
+- 목표:
+  - 업로드 편집에서 `Empty model response (status=incomplete, output_types=reasoning...)` 오류가 발생하는 회귀를 해소한다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts`의 재시도 토큰 예산을 `180/360/720`에서 `240/640/1400`으로 상향 조정했다.
+  - 재시도 조건에 `Empty model response` 오류를 명시적으로 포함해 비어 있는 불완전 응답도 다음 예산으로 재시도되도록 보강했다.
+  - `npm run lint`로 정적 검사 통과를 확인했다.
+- Troubleshooting:
+  - issue: AI 추천이 `incomplete` 상태에서 reasoning-only 응답으로 끝나 title/slug/caption/tags를 만들지 못했다.
+  - cause: 비용 절감 과정에서 `max_output_tokens` 예산이 스키마 확장(title+slug+caption+tags)에 비해 과도하게 낮아졌다.
+  - fix: 1차 예산은 저비용으로 유지하되, 2/3차 재시도 예산을 현실적인 범위로 상향해 성공률을 회복했다.
+- 사용 기술/도구:
+  - Next.js Route Handler
+  - OpenAI Responses API 재시도 제어
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 업로드 화면에서 동일 이미지로 AI 추천을 재실행해 `title/slug/caption/tags`가 정상 채워지는지 확인한다.
+
+## 2026-02-27 - AI 추천 전 이미지 리사이즈 최대 변 256으로 축소
+
+- 일시:
+  - 2026-02-27T23:21:45+0900 (KST)
+- 목표:
+  - AI 메타데이터 추천 요청 비용/지연을 더 낮추기 위해 전송 이미지 최대 변을 256px로 제한한다.
+- 수행 단계:
+  - `src/app/admin/upload/page.tsx`의 `AI_IMAGE_MAX_DIMENSION` 값을 `1000`에서 `256`으로 변경했다.
+  - `src/components/photo-detail-shell.tsx`의 동일 상수도 `256`으로 맞춰 업로드/상세 재추천 경로를 일관화했다.
+  - `npm run lint`로 정적 검사 통과를 확인했다.
+- Troubleshooting: none
+- 사용 기술/도구:
+  - Next.js client components
+  - Canvas 기반 이미지 축소 파이프라인
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 실제 업로드/상세 편집에서 AI 추천 품질 저하 여부를 확인하고 필요 시 320px 또는 384px로 재조정한다.
+
+## 2026-02-27 - 피드 카드 빈 영역/오버레이 위치 보정
+
+- 일시: 2026-02-27T23:23:36+0900 (KST)
+- 목표: 그리드 카드가 세로로 늘어나며 생긴 회색 빈 영역과 오버레이 하단 밀림을 제거.
+- 수행 단계:
+  - `src/components/masonry-feed.tsx`: 그리드 컨테이너에 `items-start` 추가.
+  - `src/components/photo-card.tsx`: 카드 루트에 `self-start` 추가.
+  - `npm run lint` 통과 확인.
+- Troubleshooting:
+  - issue: 특정 카드에서 이미지 아래 회색 빈칸이 생기고 오버레이 텍스트가 하단으로 밀려 보임.
+  - cause: CSS grid 기본 `align-self: stretch`로 카드 높이가 같은 행의 최대 높이로 늘어남.
+  - fix: 카드/그리드 정렬을 `start`로 고정해 콘텐츠 높이만큼만 렌더링.
+- 사용 기술/도구: Tailwind CSS(grid 정렬), ESLint
+- 사용 메모/명령어: `npm run lint`
+- 다음 액션: 실제 피드에서 hover 시 제목/캡션 박스가 이미지 하단에 정확히 붙는지 확인.
+
+## 2026-02-28 - 태그 그래프 뷰 1차 구현
+- 일시/목표: 2026-02-28T00:28:00+0900 (KST), 홈 햄버거→사이드바→`/graph` 진입 + 태그 기반 2D 그래프 읽기전용 제공.
+- 수행/Troubleshooting: `src/components/home-nav-drawer.tsx`, `src/app/graph/page.tsx`, `src/components/photo-graph-view.tsx`, `src/app/api/photos/graph/route.ts`, `src/types/graph.ts` 추가 및 `src/app/page.tsx` 연결; 외부 패키지 설치는 네트워크 제한으로 실패해 내장 force 레이아웃으로 대체.
+- 기술/명령어: Next.js App Router, SVG, custom force simulation, `npm run lint`.
+- 다음 액션: 실브라우저에서 그래프 성능(노드 밀집/줌/팬) 확인 후 필요 시 force 파라미터와 태그 컷오프 상한을 조정.
+
+## 2026-02-28 - 그래프 렉/사이드바 UI 2차 보정
+- 일시/목표: 2026-02-28T00:56:51+0900 (KST), 그래프 렉 완화와 햄버거/드로어 UI 정렬 개선.
+- 수행/Troubleshooting: `src/components/photo-graph-view.tsx`를 무거운 물리 시뮬레이션+팬드래그에서 태그 앵커 기반 정적 레이아웃으로 교체하고 링크 렌더 상한을 적용; `src/components/home-nav-drawer.tsx` 드로어 폭/오버레이/닫기 버튼 스타일을 정리.
+- 기술/명령어: SVG 정적 레이아웃, React state 최소화, `npm run lint`.
+- 다음 액션: 실제 데이터에서 노드 과밀 시 태그 라벨 가독성(폰트/표시 개수) 추가 튜닝.
+
+## 2026-02-28 - 햄버거 드로어 UI 리디자인
+- 일시/목표: 2026-02-28T00:59:06+0900 (KST), 햄버거 클릭 시 드로어 디자인 품질 개선.
+- 수행/Troubleshooting: `src/components/home-nav-drawer.tsx`를 카드형 메뉴/상단 헤더/아이콘 닫기 버튼/반투명 블러 오버레이/슬라이드 애니메이션 구조로 교체; Troubleshooting: none.
+- 기술/명령어: Tailwind UI 스타일링, transition, `npm run lint`.
+- 다음 액션: 실브라우저에서 모바일/데스크톱 드로어 폭과 버튼 hit-area 체감 확인.
+
+## 2026-02-28 - 그래프 확대/드래그 인터랙션 추가
+- 일시/목표: 2026-02-28T01:24:15+0900 (KST), 그래프에서 확대/축소 및 터치 드래그 이동 지원.
+- 수행/Troubleshooting: `src/components/photo-graph-view.tsx`에 viewport transform(`translate/scale`), wheel zoom, pointer drag(터치 포함), `+/-/reset` 컨트롤 추가; Troubleshooting: none.
+- 기술/명령어: SVG transform, Pointer Events, React state, `npm run lint`.
+- 다음 액션: 모바일 실기기에서 터치 드래그 감도와 최대/최소 배율 체감을 확인해 scale 범위를 미세조정.

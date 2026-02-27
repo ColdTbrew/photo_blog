@@ -89,7 +89,7 @@ export function MasonryFeed({
         <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{countText}</p>
       </div>
 
-      <div className="columns-1 gap-4 sm:columns-2 xl:columns-3">
+      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((photo) => (
           <PhotoCard key={photo.id} photo={photo} />
         ))}
