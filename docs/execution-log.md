@@ -2298,3 +2298,29 @@
   - `npm run lint`
 - 다음 액션:
   - Vercel 배포 후 `/admin/upload`에서 동일 이미지로 추천을 실행해 `title/slug/caption/tags` 정상 반환 여부와 지연 시간을 확인하고, 필요 시 `tokenBudgets`를 소폭 재조정한다.
+
+## 2026-03-01 - 관리자 업로드 전송 전 자동 압축 도입 (Vercel 413 회피)
+
+- 일시:
+  - 2026-03-01T15:18:40+0900 (KST)
+- 목표:
+  - 관리자 업로드에서 대용량 이미지가 Vercel 요청 본문 제한에 걸려 API 진입 전 413으로 차단되는 문제를 줄인다.
+- 수행 단계:
+  - `src/app/admin/upload/page.tsx`에 전송 용량 목표(`UPLOAD_TRANSPORT_TARGET_BYTES=4,000,000`)와 최대 변(`UPLOAD_TRANSPORT_MAX_DIMENSION=4096`) 상수를 추가했다.
+  - 같은 파일에 `compressFileForUploadTransport`를 추가해 업로드 직전 이미지를 canvas 기반으로 webp 압축(스케일/품질 단계 탐색)하도록 구현했다.
+  - 업로드 제출 시 4.5MB 초과 파일은 자동 압축을 먼저 시도하고, 압축 후에도 제한 초과면 사용자에게 명확한 실패 메시지를 노출하도록 변경했다.
+  - 업로드 성공 메시지에 전송 전 압축 크기 변화(`원본 -> 압축본`)를 함께 표시해 사용자 피드백을 강화했다.
+  - `npm run lint`, `npm run build`로 정적/빌드 검증을 완료했다.
+- 트러블슈팅:
+  - 이슈: 업로드 시 `Unexpected token 'R', "Request En"... is not valid JSON` 및 413(`FUNCTION_PAYLOAD_TOO_LARGE`)가 발생.
+  - 원인: Vercel 플랫폼에서 요청 본문 크기가 초과되면 API 라우트 실행 전에 차단되어 백엔드 압축 로직이 동작할 수 없음.
+  - 조치: 백엔드 압축과 별도로 클라이언트 전송 전 압축 단계를 추가해 플랫폼 제한 이전에 요청 크기를 낮춤.
+- 사용 기술/도구:
+  - Next.js App Router (Client Component)
+  - Browser Canvas API, WebP 인코딩
+  - ESLint, Next.js build
+- 사용 메모/명령어:
+  - `npm run lint`
+  - `npm run build`
+- 다음 액션:
+  - 프로덕션 관리자 업로드에서 5MB 이상 이미지로 업로드 재검증 후, 필요 시 압축 품질/해상도 탐색 범위를 조정한다.

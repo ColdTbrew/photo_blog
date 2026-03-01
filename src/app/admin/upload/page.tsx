@@ -14,6 +14,8 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const VERCEL_REQUEST_BODY_LIMIT_BYTES = 4_500_000;
+const UPLOAD_TRANSPORT_TARGET_BYTES = 4_000_000;
+const UPLOAD_TRANSPORT_MAX_DIMENSION = 4096;
 
 function slugify(input: string): string {
   return input
@@ -41,6 +43,19 @@ async function parseResponseBodySafely(response: Response): Promise<{
   } catch {
     return { json: null, text };
   }
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 B";
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 type BooleanSelect = "" | "true" | "false";
@@ -258,6 +273,86 @@ async function createAiSuggestionImage(file: File): Promise<File> {
     });
   } catch {
     // If browser image decoding or blob URL creation fails, continue with original file.
+    return file;
+  } finally {
+    if (sourceUrl) {
+      URL.revokeObjectURL(sourceUrl);
+    }
+  }
+}
+
+async function compressFileForUploadTransport(file: File): Promise<File> {
+  if (typeof window === "undefined" || !file.type.startsWith("image/")) {
+    return file;
+  }
+
+  let sourceUrl: string | null = null;
+  try {
+    sourceUrl = URL.createObjectURL(file);
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("image-load-failed"));
+      img.src = sourceUrl!;
+    });
+
+    const originalWidth = image.naturalWidth || 0;
+    const originalHeight = image.naturalHeight || 0;
+    if (originalWidth <= 0 || originalHeight <= 0) {
+      return file;
+    }
+
+    const scaleBase = Math.min(1, UPLOAD_TRANSPORT_MAX_DIMENSION / Math.max(originalWidth, originalHeight));
+    const scaleCandidates = [1, 0.9, 0.8, 0.7, 0.6].map((v) => v * scaleBase);
+    const qualityCandidates = [0.9, 0.82, 0.74, 0.66, 0.58];
+
+    let bestBlob: Blob | null = null;
+
+    for (const scale of scaleCandidates) {
+      const targetWidth = Math.max(1, Math.round(originalWidth * scale));
+      const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        continue;
+      }
+      ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+      for (const quality of qualityCandidates) {
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob(resolve, "image/webp", quality);
+        });
+        if (!blob) {
+          continue;
+        }
+
+        if (!bestBlob || blob.size < bestBlob.size) {
+          bestBlob = blob;
+        }
+        if (blob.size <= UPLOAD_TRANSPORT_TARGET_BYTES) {
+          const lastDot = file.name.lastIndexOf(".");
+          const baseName = lastDot > 0 ? file.name.slice(0, lastDot) : file.name;
+          return new File([blob], `${baseName}-upload.webp`, {
+            type: "image/webp",
+            lastModified: Date.now(),
+          });
+        }
+      }
+    }
+
+    if (bestBlob && bestBlob.size < file.size) {
+      const lastDot = file.name.lastIndexOf(".");
+      const baseName = lastDot > 0 ? file.name.slice(0, lastDot) : file.name;
+      return new File([bestBlob], `${baseName}-upload.webp`, {
+        type: "image/webp",
+        lastModified: Date.now(),
+      });
+    }
+
+    return file;
+  } catch {
     return file;
   } finally {
     if (sourceUrl) {
@@ -534,16 +629,25 @@ export default function AdminUploadPage() {
       setStatus({ type: "error", message: "이미지 파일을 선택해 주세요." });
       return;
     }
-    if (file.size > VERCEL_REQUEST_BODY_LIMIT_BYTES) {
-      setStatus({
-        type: "error",
-        message:
-          "파일 크기가 너무 커서 업로드가 차단될 수 있습니다. 4.5MB 이하로 줄이거나 압축 후 다시 시도해 주세요.",
-      });
-      return;
-    }
-
     try {
+      let uploadFile = file;
+      let compressionNotice = "";
+      if (uploadFile.size > VERCEL_REQUEST_BODY_LIMIT_BYTES) {
+        const compressed = await compressFileForUploadTransport(uploadFile);
+        if (compressed.size < uploadFile.size) {
+          compressionNotice = ` (전송 전 압축: ${formatBytes(uploadFile.size)} → ${formatBytes(compressed.size)})`;
+        }
+        uploadFile = compressed;
+      }
+      if (uploadFile.size > VERCEL_REQUEST_BODY_LIMIT_BYTES) {
+        setStatus({
+          type: "error",
+          message:
+            "자동 압축 후에도 업로드 요청 크기를 초과했습니다. 원본 이미지를 더 줄인 뒤 다시 시도해 주세요.",
+        });
+        return;
+      }
+
       const formData = new FormData();
       formData.set("title", title);
       formData.set("slug", slug || suggestedSlug);
@@ -566,7 +670,7 @@ export default function AdminUploadPage() {
       formData.set("exifFNumber", exif.fNumber);
       formData.set("exifExposureProgram", exif.exposureProgram);
       formData.set("exifExposureTime", exif.exposureTime);
-      formData.set("file", file);
+      formData.set("file", uploadFile);
 
       const response = await fetch("/api/admin/photos", {
         method: "POST",
@@ -606,7 +710,7 @@ export default function AdminUploadPage() {
       const transformedNotice = data.transformed ? " (자동 업스케일 적용)" : "";
       setStatus({
         type: "success",
-        message: `업로드 완료: ${data.slug} | 최종 해상도: ${finalSize}${transformedNotice}`,
+        message: `업로드 완료: ${data.slug} | 최종 해상도: ${finalSize}${transformedNotice}${compressionNotice}`,
       });
       setTitle("");
       setSlug("");
