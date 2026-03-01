@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const DEFAULT_MODEL = "gpt-4.1-mini";
+const DEFAULT_MODEL = "gpt-5-nano";
 const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
 
 type AiSuggestion = {
@@ -291,13 +291,37 @@ function isIncompleteStatus(payload: Record<string, unknown>): boolean {
   return safeString(payload.status).toLowerCase() === "incomplete";
 }
 
-async function callVisionModel(file: File): Promise<AiSuggestion> {
-  const apiKey = getRequiredEnv("OPENAI_API_KEY");
-  const model = getSuggestionModel();
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const mimeType = file.type || "image/jpeg";
-  const dataUrl = `data:${mimeType};base64,${bytes.toString("base64")}`;
+function getIncompleteReason(payload: Record<string, unknown>): string {
+  const details = payload.incomplete_details;
+  if (!details || typeof details !== "object") {
+    return "";
+  }
+  return safeString((details as Record<string, unknown>).reason).toLowerCase();
+}
 
+function supportsReasoningEffort(model: string): boolean {
+  return model.toLowerCase().startsWith("gpt-5");
+}
+
+function getTokenBudgets(model: string): number[] {
+  if (supportsReasoningEffort(model)) {
+    return [800, 2400, 6000];
+  }
+  return [320, 960, 2400];
+}
+
+function isRetryableParseError(error: Error): boolean {
+  return (
+    error.message.includes("Model did not return valid JSON") ||
+    error.message.includes("Empty model response")
+  );
+}
+
+async function callVisionModelWithModel(
+  dataUrl: string,
+  apiKey: string,
+  model: string
+): Promise<AiSuggestion> {
   const requestOnce = async (maxOutputTokens: number): Promise<Record<string, unknown>> => {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -312,6 +336,13 @@ async function callVisionModel(file: File): Promise<AiSuggestion> {
             type: "json_object",
           },
         },
+        ...(supportsReasoningEffort(model)
+          ? {
+              reasoning: {
+                effort: "minimal",
+              },
+            }
+          : {}),
         input: [
           {
             role: "user",
@@ -375,8 +406,7 @@ async function callVisionModel(file: File): Promise<AiSuggestion> {
     return raw;
   };
 
-  // Keep first attempt cheap, but allow larger retries to avoid incomplete reasoning-only responses.
-  const tokenBudgets = [240, 640, 1400];
+  const tokenBudgets = getTokenBudgets(model);
   let lastError: Error | null = null;
 
   for (const maxTokens of tokenBudgets) {
@@ -391,9 +421,10 @@ async function callVisionModel(file: File): Promise<AiSuggestion> {
       }
       lastError = error;
 
-      const isJsonParseIssue = error.message.includes("Model did not return valid JSON");
-      const isEmptyResponseIssue = error.message.includes("Empty model response");
-      const shouldRetry = isIncompleteStatus(raw) || isJsonParseIssue || isEmptyResponseIssue;
+      const incompleteReason = getIncompleteReason(raw);
+      const shouldRetryIncomplete =
+        isIncompleteStatus(raw) && (!incompleteReason || incompleteReason === "max_output_tokens");
+      const shouldRetry = shouldRetryIncomplete || isRetryableParseError(error);
       if (!shouldRetry || maxTokens === tokenBudgets[tokenBudgets.length - 1]) {
         throw error;
       }
@@ -404,6 +435,17 @@ async function callVisionModel(file: File): Promise<AiSuggestion> {
     throw lastError;
   }
   throw new Error("Unknown model parsing error");
+}
+
+async function callVisionModel(file: File): Promise<AiSuggestion> {
+  const apiKey = getRequiredEnv("OPENAI_API_KEY");
+  const model = getSuggestionModel();
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const mimeType = file.type || "image/jpeg";
+  const dataUrl = `data:${mimeType};base64,${bytes.toString("base64")}`;
+
+  return callVisionModelWithModel(dataUrl, apiKey, model);
 }
 
 export async function POST(request: Request) {

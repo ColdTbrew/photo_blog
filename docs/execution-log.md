@@ -1,5 +1,125 @@
 # Execution Log
 
+## 2026-03-01 13:50 KST - AI 추천 라우트 fallback 제거 및 gpt-5-nano 실호출 검증
+
+- Date/time: 2026-03-01 13:50 KST
+- Goal: AI 메타데이터 추천 경로에서 모델 fallback을 제거하고 `gpt-5-nano` 이미지 입력이 실제로 정상 동작하는지 직접 검증.
+- Steps taken:
+  - `src/app/api/admin/photos/ai-suggest/route.ts` 수정:
+    - fallback 관련 로직(`buildModelCandidates`, `shouldFallbackModel`) 제거.
+    - 단일 모델(`getSuggestionModel`)만 사용하도록 호출 경로 단순화.
+    - 기본 모델 값을 `gpt-5-nano`로 변경.
+  - `src/app/api/admin/photos/ai-suggest/route.test.ts` 수정:
+    - fallback 검증 테스트 삭제.
+    - 동일 모델 재시도(첫 응답 `incomplete/reasoning-only`, 두 번째 응답 성공) 검증 테스트로 교체.
+  - 임시 이미지 생성 후 OpenAI Responses API 실호출 테스트 수행:
+    - 최초 1x1 PNG 요청 실패 원인 확인.
+    - `sharp`로 JPEG 생성 후 `model=gpt-5-nano`로 재호출.
+    - HTTP 200 / `status=completed` / 메시지 텍스트(JSON) 수신 확인.
+  - 검증 실행:
+    - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+    - `npm test`
+    - `npm run lint`
+- Troubleshooting:
+  - Issue: 실호출 첫 시도에서 `invalid_request_error`와 함께 이미지 유효성 오류 발생.
+  - Cause: 테스트용 1x1 PNG 데이터가 API에서 유효 이미지로 인정되지 않음.
+  - Fix: `sharp`로 256x256 JPEG를 생성해 동일 요청 재실행, 정상 응답 확인.
+- Tech stack/tools used:
+  - Next.js Route Handler
+  - OpenAI Responses API (`gpt-5-nano`)
+  - Node.js (`fetch`), `sharp`
+  - Vitest, ESLint
+- Usage notes or commands:
+  - `node --env-file=.env.local -e '...'` (Responses API 직접 호출)
+  - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+  - `npm test`
+  - `npm run lint`
+- Next action:
+  - 관리자 업로드 화면에서 동일 이미지로 `AI로 메타데이터 추천` 재시도 후 운영 로그의 실패 빈도(특히 `incomplete` 재발) 추적.
+
+## 2026-03-01 13:46 KST - AI 메타데이터 추천 `reasoning-only incomplete` 오류 대응
+
+- Date/time: 2026-03-01 13:46 KST
+- Goal: `/api/admin/photos/ai-suggest`에서 `Empty model response (status=incomplete, output_types=reasoning, content_types=none)` 오류가 발생할 때 자동 복구되도록 안정화.
+- Steps taken:
+  - `src/app/api/admin/photos/ai-suggest/route.ts` 분석 후 재시도/파싱 로직 점검.
+  - 모델별 토큰 예산 함수(`getTokenBudgets`) 추가:
+    - `gpt-5` 계열: `[800, 2400, 6000]`
+    - 그 외 모델: `[320, 960, 2400]`
+  - 모델 후보 체인(`buildModelCandidates`) 추가:
+    - 우선 `OPENAI_VISION_MODEL` 사용
+    - 실패 시 자동으로 기본 모델 `gpt-4.1-mini` 폴백
+  - `callVisionModelWithModel` / `callVisionModel` 분리로 요청 재시도와 모델 폴백을 독립 처리.
+  - 치명적 인증 에러(401/403)는 폴백하지 않도록 `shouldFallbackModel` 조건 추가.
+  - 회귀 테스트 추가: `src/app/api/admin/photos/ai-suggest/route.test.ts`
+    - `gpt-5-mini`가 반복적으로 `incomplete + reasoning`만 반환하는 상황을 모킹
+    - `gpt-4.1-mini` 폴백 후 정상 JSON 추천값 반환 검증
+  - 검증 실행:
+    - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+    - `npm test`
+    - `npm run lint`
+- Troubleshooting:
+  - Issue: AI 추천 시 모델이 텍스트 출력 없이 reasoning만 반환하며 `incomplete` 상태로 종료.
+  - Cause: 특정 모델(`gpt-5` 계열 설정 시)에서 토큰 한도 내 최종 텍스트 출력이 생성되지 않는 케이스 발생.
+  - Fix: 모델별 재시도 토큰 상향 + 기본 모델 폴백 경로 추가로 자동 복구.
+- Tech stack/tools used:
+  - Next.js Route Handler
+  - OpenAI Responses API
+  - Vitest
+  - ESLint
+- Usage notes or commands:
+  - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+  - `npm test`
+  - `npm run lint`
+- Next action:
+  - 운영 환경에서 `OPENAI_VISION_MODEL` 값 확인 후 필요 시 `gpt-4.1-mini` 고정 또는 `gpt-5` 유지 + 모니터링 정책 결정.
+
+## 2026-03-01 13:41 KST - 테스트 스위트 전면 구축 (Vitest)
+
+- Date/time: 2026-03-01 13:41 KST
+- Goal: 프로젝트 주요 로직/라우트/클라이언트 컴포넌트에 대한 실행 가능한 테스트 코드를 일괄 추가하고 CI 수준으로 검증 가능하게 구성.
+- Steps taken:
+  - 테스트 러너 및 라이브러리 설치: `vitest`, `@vitest/coverage-v8`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`.
+  - `package.json`에 테스트 스크립트 추가: `test`, `test:watch`, `test:coverage`.
+  - 테스트 설정 파일 추가: `vitest.config.ts`, `vitest.setup.ts`.
+  - 테스트 fixture 추가: `src/test/fixtures.ts`.
+  - 테스트 파일 추가:
+    - `src/lib/image-resolution.test.ts`
+    - `src/lib/photos.test.ts`
+    - `src/lib/admin-auth-server.test.ts`
+    - `src/app/api/photos/route.test.ts`
+    - `src/app/api/photos/graph/route.test.ts`
+    - `src/app/api/photos/[slug]/download/route.test.ts`
+    - `src/app/api/admin/session/route.test.ts`
+    - `src/app/api/admin/photos/route.test.ts`
+    - `src/app/api/admin/photos/[slug]/route.test.ts`
+    - `src/app/api/admin/photos/ai-suggest/route.test.ts`
+    - `src/components/photo-card.test.tsx`
+    - `src/components/masonry-feed.test.tsx`
+    - `src/components/home-nav-drawer.test.tsx`
+    - `src/components/admin-auth-actions.test.tsx`
+  - `vi.mock` 호이스팅 이슈를 `vi.hoisted` 패턴으로 정리해 안정적으로 모듈 목(mock) 동작하도록 수정.
+  - 컴포넌트 테스트에 `// @vitest-environment jsdom` 지정 및 `localStorage` mock 보완.
+  - 검증 실행: `npm test`, `npm run lint` 통과.
+- Troubleshooting:
+  - Issue: 초기 테스트 실행 시 다수 파일에서 `Cannot access '<mock>' before initialization` 에러 발생.
+  - Cause: `vi.mock`가 호이스팅되며 top-level `const` mock 참조 시 초기화 순서 충돌.
+  - Fix: 목 객체를 `vi.hoisted`로 선언하고 해당 참조를 모듈 팩토리에 주입.
+  - Issue: 컴포넌트 테스트에서 `window/document/localStorage` 관련 실패 발생.
+  - Cause: 테스트 환경이 Node로 잡히거나 환경별 `localStorage` 구현 차이 존재.
+  - Fix: 각 컴포넌트 테스트 파일에 `jsdom` 환경을 명시하고 `localStorage`를 테스트용 mock으로 주입.
+- Tech stack/tools used:
+  - Next.js + TypeScript
+  - Vitest (v4), Testing Library, jsdom
+  - ESLint
+  - Shell: `npm`, `date`
+- Usage notes or commands:
+  - `npm install -D vitest @vitest/coverage-v8 jsdom @testing-library/react @testing-library/user-event @testing-library/jest-dom`
+  - `npm test`
+  - `npm run lint`
+- Next action:
+  - PR/CI 파이프라인에 `npm test`를 필수 체크로 연결하고, 필요 시 `test:coverage` 기준(예: line/branch threshold) 설정.
+
 ## 2026-02-22 - AGENTS.md에 글로벌 에이전트 규칙 추가
 
 - 목표: Workflow Orchestration, Task Management, Core Principles를 AGENTS.md에 반영.
@@ -1917,3 +2037,52 @@
 - 수행/Troubleshooting: `src/components/photo-graph-view.tsx`에 viewport transform(`translate/scale`), wheel zoom, pointer drag(터치 포함), `+/-/reset` 컨트롤 추가; Troubleshooting: none.
 - 기술/명령어: SVG transform, Pointer Events, React state, `npm run lint`.
 - 다음 액션: 모바일 실기기에서 터치 드래그 감도와 최대/최소 배율 체감을 확인해 scale 범위를 미세조정.
+
+## 2026-03-01 - Vercel 관리자 업로드 AI 추천 빈 응답 자동 복구
+
+- 일시:
+  - 2026-03-01T13:16:12+0900 (KST)
+- 목표:
+  - 프로덕션 `/admin/upload`에서 `Empty model response (status=incomplete, output_types=reasoning, content_types=none)`로 AI 메타데이터 추천이 실패하는 문제를 완화한다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts`에 `isReasoningOnlyIncomplete` 판별 함수를 추가해 `incomplete + reasoning-only + text 없음` 상태를 명시적으로 감지했다.
+  - 같은 파일의 모델 호출 흐름을 확장해, `OPENAI_VISION_MODEL` 1차 시도 실패 시(위 조건) 기본 모델 `gpt-4.1-mini`로 자동 fallback 재시도하도록 변경했다.
+  - 기존 재시도 토큰 예산(`240/640/1400`)은 유지하면서, 각 예산 내 파싱/빈응답 재시도 후 최종 실패 시에만 fallback되도록 제어했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- 트러블슈팅:
+  - 이슈: Vercel 배포판 관리자 업로드 AI 추천에서 `status=incomplete`, `output_types=reasoning`, `content_types=none` 오류로 결과 JSON이 비어 실패.
+  - 원인: 설정 모델이 reasoning-only 불완전 응답을 반환할 때 최종 텍스트(JSON)가 생성되지 않아 파싱 단계에서 실패.
+  - 조치: reasoning-only 불완전 응답을 fallback 트리거로 정의하고, 기본 비전 모델로 자동 재시도해 성공 경로를 확보.
+- 사용 기술/도구:
+  - Next.js Route Handler
+  - OpenAI Responses API
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - 프로덕션 `/admin/upload`에서 동일 이미지로 `AI로 메타데이터 추천`을 재실행해 fallback 후 title/slug/caption/tags가 채워지는지 확인하고, 필요 시 Vercel 환경변수 `OPENAI_VISION_MODEL`을 `gpt-4.1-mini`로 고정한다.
+
+## 2026-03-01 - GPT-5 Nano 단일 모델 유지로 AI 추천 안정화
+
+- 일시:
+  - 2026-03-01T13:19:53+0900 (KST)
+- 목표:
+  - `gpt-5-nano` 단일 모델 정책을 유지하면서 `/admin/upload` AI 추천의 `status=incomplete` 실패율을 낮춘다.
+- 수행 단계:
+  - `src/app/api/admin/photos/ai-suggest/route.ts`에서 직전 추가했던 모델 fallback 루프를 제거했다.
+  - 같은 파일에 `getIncompleteReason`을 추가해 `incomplete_details.reason`을 읽고, `max_output_tokens` 계열 불완전 응답에만 재시도하도록 조정했다.
+  - `gpt-5*` 계열 모델 호출 시 `reasoning.effort: "minimal"`을 설정하도록 `supportsReasoningEffort` 분기 로직을 추가했다.
+  - 재시도 토큰 예산을 `320/960/2400`으로 조정해 1차 비용은 낮게 유지하되 불완전 응답 복구 여지를 확보했다.
+  - `npm run lint`로 정적 검증을 수행했다.
+- 트러블슈팅:
+  - 이슈: 모델이 이미지 입력을 지원함에도 fallback 도입이 운영 의도(단일 모델 사용)와 맞지 않는다는 피드백 발생.
+  - 원인: 실패 원인을 모델 미지원으로 간주한 대응이었고, 실제 핵심은 reasoning 토큰 소진 기반의 incomplete 응답 가능성이 더 큼.
+  - 조치: fallback 제거 후 단일 모델 유지, reasoning effort 및 재시도 조건을 정교화.
+- 사용 기술/도구:
+  - Next.js Route Handler
+  - OpenAI Responses API (`reasoning.effort`, `incomplete_details`)
+  - ESLint (`npm run lint`)
+- 사용 메모/명령어:
+  - `npm run lint`
+- 다음 액션:
+  - Vercel 배포 후 `/admin/upload`에서 동일 이미지로 추천을 실행해 `title/slug/caption/tags` 정상 반환 여부와 지연 시간을 확인하고, 필요 시 `tokenBudgets`를 소폭 재조정한다.
