@@ -1,5 +1,36 @@
 # Execution Log
 
+## 2026-03-01 15:04 KST - Vercel 배포 실패(TypeScript) 원인 확인 및 수정
+
+- Date/time: 2026-03-01 15:04 KST
+- Goal: Vercel production 배포 실패 원인을 CLI로 확인하고 빌드 실패를 재발 없이 해결.
+- Steps taken:
+  - Vercel CLI로 실패 배포 확인:
+    - `npx vercel ls photo_blog --yes`
+    - 최신 실패 배포 URL: `photoblog-6uhw4803j-coldbrews-projects-fc2159b4.vercel.app`
+  - 실패 배포 빌드 로그 조회:
+    - `npx vercel inspect <deployment-url> --logs`
+    - 오류 확인: `src/app/admin/upload/page.tsx`에서 `img.src = sourceUrl` 타입 불일치(`string | null` → `string`)로 TypeScript 컴파일 실패.
+  - 코드 수정:
+    - `src/app/admin/upload/page.tsx`에서 `sourceUrl`을 지역 상수(`objectUrl`)로 고정 후 `img.src`에 할당.
+    - 동일 패턴 예방을 위해 `src/components/photo-detail-shell.tsx`도 동일 수정.
+  - 로컬 빌드 검증:
+    - `npm run build` 실행, Next.js 빌드 + TypeScript 단계 통과 확인.
+- Troubleshooting:
+  - Issue: Vercel 배포가 TypeScript 에러로 실패.
+  - Cause: nullable 타입(`string | null`) 값을 `HTMLImageElement.src`에 직접 할당.
+  - Fix: non-null 값으로 좁혀진 지역 상수를 사용해 타입 안정성 확보.
+- Tech stack/tools used:
+  - Vercel CLI (`vercel ls`, `vercel inspect --logs`)
+  - Next.js build (`next build`)
+  - TypeScript
+- Usage notes or commands:
+  - `npx vercel ls photo_blog --yes`
+  - `npx vercel inspect https://photoblog-6uhw4803j-coldbrews-projects-fc2159b4.vercel.app --logs`
+  - `npm run build`
+- Next action:
+  - 수정 커밋 후 push하여 Vercel 재배포 실행, 최신 deployment status가 `Ready`인지 확인.
+
 ## 2026-03-01 14:57 KST - 업로드/AI 추천 중 브라우저 URL 패턴 예외 방어
 
 - Date/time: 2026-03-01 14:57 KST

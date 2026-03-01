@@ -105,11 +105,12 @@ async function createAiSuggestionImage(file: File): Promise<File> {
   let sourceUrl: string | null = null;
   try {
     sourceUrl = URL.createObjectURL(file);
+    const objectUrl = sourceUrl;
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new window.Image();
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("image-load-failed"));
-      img.src = sourceUrl;
+      img.src = objectUrl;
     });
 
     const originalWidth = image.naturalWidth || 0;
