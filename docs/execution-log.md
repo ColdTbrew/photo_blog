@@ -1,5 +1,32 @@
 # Execution Log
 
+## 2026-03-01 15:14 KST - 업로드 페이지 JSON 파싱 오류(Unexpected token 'R') 대응
+
+- Date/time: 2026-03-01 15:14 KST
+- Goal: 관리자 업로드 페이지에서 `Unexpected token 'R', "Request En"... is not valid JSON` 오류를 사용자 친화적으로 처리하고 업로드 실패 원인을 명확히 안내.
+- Steps taken:
+  - `src/app/admin/upload/page.tsx` 수정:
+    - 응답 본문을 안전하게 읽는 `parseResponseBodySafely` 유틸 추가(텍스트/JSON 모두 처리).
+    - 업로드/AI 추천 요청에서 `response.json()` 직접 호출 제거.
+    - HTTP 413 응답 시 명시적 메시지 처리:
+      - 업로드: `업로드 요청이 너무 큽니다(413)...`
+      - AI 추천: `AI 추천 요청이 너무 큽니다(413)...`
+    - 업로드 제출 전 파일 크기 사전 체크 추가(`4.5MB` 초과 시 즉시 안내).
+  - 검증 실행:
+    - `npm run lint` 통과.
+- Troubleshooting:
+  - Issue: 업로드 실패 시 JSON 파싱 예외(`Unexpected token 'R'...`) 노출.
+  - Cause: Vercel이 413에서 plain text(`Request Entity Too Large`)를 반환했는데 프론트가 JSON으로 강제 파싱.
+  - Fix: 안전 파싱 + 413 전용 에러 메시지 + 사전 파일 크기 체크.
+- Tech stack/tools used:
+  - Next.js client page (`admin/upload`)
+  - Fetch response parsing (text/json fallback)
+  - ESLint
+- Usage notes or commands:
+  - `npm run lint`
+- Next action:
+  - 배포 후 `/admin/upload`에서 4.5MB 초과/미만 파일 각각 테스트해 사용자 메시지와 성공 동작 확인.
+
 ## 2026-03-01 15:04 KST - Vercel 배포 실패(TypeScript) 원인 확인 및 수정
 
 - Date/time: 2026-03-01 15:04 KST

@@ -13,6 +13,7 @@ type Status =
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const VERCEL_REQUEST_BODY_LIMIT_BYTES = 4_500_000;
 
 function slugify(input: string): string {
   return input
@@ -21,6 +22,25 @@ function slugify(input: string): string {
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
+}
+
+async function parseResponseBodySafely(response: Response): Promise<{
+  json: Record<string, unknown> | null;
+  text: string;
+}> {
+  const text = (await response.text()).trim();
+  if (!text) {
+    return { json: null, text: "" };
+  }
+
+  try {
+    return {
+      json: JSON.parse(text) as Record<string, unknown>,
+      text,
+    };
+  } catch {
+    return { json: null, text };
+  }
 }
 
 type BooleanSelect = "" | "true" | "false";
@@ -442,10 +462,14 @@ export default function AdminUploadPage() {
         body: formData,
       });
 
-      const data = (await response.json()) as (AiSuggestion & AiSuggestErrorResponse);
+      const { json, text } = await parseResponseBodySafely(response);
+      const data = (json ?? {}) as (AiSuggestion & AiSuggestErrorResponse);
       if (!response.ok) {
+        if (response.status === 413) {
+          throw new Error("AI 추천 요청이 너무 큽니다(413). 더 작은 파일로 시도해 주세요.");
+        }
         const details = [
-          data.error,
+          data.error || text,
           data.openaiType ? `type=${data.openaiType}` : "",
           data.openaiCode ? `code=${data.openaiCode}` : "",
           typeof data.openaiStatus === "number" ? `status=${data.openaiStatus}` : "",
@@ -510,6 +534,14 @@ export default function AdminUploadPage() {
       setStatus({ type: "error", message: "이미지 파일을 선택해 주세요." });
       return;
     }
+    if (file.size > VERCEL_REQUEST_BODY_LIMIT_BYTES) {
+      setStatus({
+        type: "error",
+        message:
+          "파일 크기가 너무 커서 업로드가 차단될 수 있습니다. 4.5MB 이하로 줄이거나 압축 후 다시 시도해 주세요.",
+      });
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -544,7 +576,8 @@ export default function AdminUploadPage() {
         body: formData,
       });
 
-      const data = (await response.json()) as {
+      const { json, text } = await parseResponseBodySafely(response);
+      const data = (json ?? {}) as {
         error?: string;
         slug?: string;
         transformed?: boolean;
@@ -552,6 +585,17 @@ export default function AdminUploadPage() {
         finalHeight?: number;
       };
       if (!response.ok) {
+        if (response.status === 413) {
+          throw new Error(
+            "업로드 요청이 너무 큽니다(413). 이미지 파일을 4.5MB 이하로 줄여 다시 시도해 주세요."
+          );
+        }
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        if (text) {
+          throw new Error(text);
+        }
         throw new Error(data.error ?? "업로드에 실패했습니다.");
       }
 
