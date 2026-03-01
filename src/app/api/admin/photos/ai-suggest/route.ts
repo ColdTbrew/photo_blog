@@ -11,6 +11,8 @@ type AiSuggestion = {
   tags: string[];
 };
 
+const MAX_USER_PROMPT_CHARS = 240;
+
 type OpenAiErrorPayload = {
   status: number;
   message: string;
@@ -303,6 +305,45 @@ function supportsReasoningEffort(model: string): boolean {
   return model.toLowerCase().startsWith("gpt-5");
 }
 
+function sanitizeUserPrompt(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().slice(0, MAX_USER_PROMPT_CHARS);
+}
+
+type PromptMode = "full" | "compact";
+
+function buildInstruction(userPrompt: string, mode: PromptMode): string {
+  if (mode === "compact") {
+    return [
+      "Analyze this image and return JSON only.",
+      "Required keys: title, slug, caption, tags.",
+      "title/caption in Korean. slug and tags in lowercase english kebab-case.",
+      "tags must be an array with 3-5 items.",
+      "Do not include explanation. Output only one JSON object.",
+      userPrompt ? `Additional user guidance: ${userPrompt}` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return [
+    "Analyze this photo and suggest metadata for a photo blog.",
+    "Respond as strict JSON object with keys: title (string), slug (string), caption (string), tags (string[]).",
+    "Title should be primarily in Korean.",
+    "Keep title short (max 24 chars).",
+    "Slug must be English only, lowercase, and kebab-case for URL path.",
+    "Caption should be one concise Korean sentence (max 70 chars).",
+    "Tags must be English only, lowercase, kebab-case words/phrases, 3-5 items.",
+    "No markdown, no explanation, JSON only.",
+    userPrompt ? `Additional user guidance: ${userPrompt}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function getTokenBudgets(model: string): number[] {
   if (supportsReasoningEffort(model)) {
     return [800, 2400, 6000];
@@ -320,9 +361,16 @@ function isRetryableParseError(error: Error): boolean {
 async function callVisionModelWithModel(
   dataUrl: string,
   apiKey: string,
-  model: string
+  model: string,
+  userPrompt: string
 ): Promise<AiSuggestion> {
-  const requestOnce = async (maxOutputTokens: number): Promise<Record<string, unknown>> => {
+  const requestOnce = async (
+    maxOutputTokens: number,
+    mode: PromptMode,
+    includeReasoning: boolean
+  ): Promise<Record<string, unknown>> => {
+    const instruction = buildInstruction(userPrompt, mode);
+
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -336,7 +384,7 @@ async function callVisionModelWithModel(
             type: "json_object",
           },
         },
-        ...(supportsReasoningEffort(model)
+        ...(supportsReasoningEffort(model) && includeReasoning
           ? {
               reasoning: {
                 effort: "minimal",
@@ -349,16 +397,7 @@ async function callVisionModelWithModel(
             content: [
               {
                 type: "input_text",
-                text: [
-                  "Analyze this photo and suggest metadata for a photo blog.",
-                  "Respond as strict JSON object with keys: title (string), slug (string), caption (string), tags (string[]).",
-                  "Title should be primarily in Korean.",
-                  "Keep title short (max 24 chars).",
-                  "Slug must be English only, lowercase, and kebab-case for URL path.",
-                  "Caption should be one concise Korean sentence (max 70 chars).",
-                  "Tags must be English only, lowercase, kebab-case words/phrases, 3-5 items.",
-                  "No markdown, no explanation, JSON only.",
-                ].join(" "),
+                text: instruction,
               },
               {
                 type: "input_image",
@@ -408,9 +447,11 @@ async function callVisionModelWithModel(
 
   const tokenBudgets = getTokenBudgets(model);
   let lastError: Error | null = null;
+  let lastRaw: Record<string, unknown> | null = null;
 
   for (const maxTokens of tokenBudgets) {
-    const raw = await requestOnce(maxTokens);
+    const raw = await requestOnce(maxTokens, "full", true);
+    lastRaw = raw;
     try {
       const text = readOutputText(raw);
       const parsed = extractJsonFromText(text);
@@ -425,10 +466,27 @@ async function callVisionModelWithModel(
       const shouldRetryIncomplete =
         isIncompleteStatus(raw) && (!incompleteReason || incompleteReason === "max_output_tokens");
       const shouldRetry = shouldRetryIncomplete || isRetryableParseError(error);
-      if (!shouldRetry || maxTokens === tokenBudgets[tokenBudgets.length - 1]) {
+      if (!shouldRetry) {
         throw error;
       }
+      if (maxTokens === tokenBudgets[tokenBudgets.length - 1]) {
+        break;
+      }
     }
+  }
+
+  // Rescue path: reasoning-only incomplete can happen with verbose reasoning traces.
+  // Retry once with a compact instruction and no explicit reasoning request.
+  if (
+    lastError &&
+    lastRaw &&
+    isRetryableParseError(lastError) &&
+    isIncompleteStatus(lastRaw)
+  ) {
+    const rescueRaw = await requestOnce(1200, "compact", false);
+    const rescueText = readOutputText(rescueRaw);
+    const rescueParsed = extractJsonFromText(rescueText);
+    return parseSuggestion(rescueParsed);
   }
 
   if (lastError) {
@@ -437,7 +495,7 @@ async function callVisionModelWithModel(
   throw new Error("Unknown model parsing error");
 }
 
-async function callVisionModel(file: File): Promise<AiSuggestion> {
+async function callVisionModel(file: File, userPrompt: string): Promise<AiSuggestion> {
   const apiKey = getRequiredEnv("OPENAI_API_KEY");
   const model = getSuggestionModel();
 
@@ -445,7 +503,7 @@ async function callVisionModel(file: File): Promise<AiSuggestion> {
   const mimeType = file.type || "image/jpeg";
   const dataUrl = `data:${mimeType};base64,${bytes.toString("base64")}`;
 
-  return callVisionModelWithModel(dataUrl, apiKey, model);
+  return callVisionModelWithModel(dataUrl, apiKey, model, userPrompt);
 }
 
 export async function POST(request: Request) {
@@ -457,6 +515,7 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const file = formData.get("file");
+    const userPrompt = sanitizeUserPrompt(formData.get("prompt"));
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "file is required" }, { status: 400 });
     }
@@ -470,7 +529,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const suggestion = await callVisionModel(file);
+    const suggestion = await callVisionModel(file, userPrompt);
     return NextResponse.json(suggestion);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";

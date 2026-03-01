@@ -161,6 +161,7 @@ export function PhotoDetailShell({ photo }: Props) {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [status, setStatus] = useState<Status>({ type: "idle" });
   const [aiSuggestStatus, setAiSuggestStatus] = useState<Status>({ type: "idle" });
+  const [aiPrompt, setAiPrompt] = useState("");
 
   const [title, setTitle] = useState(photo.title);
   const [slug, setSlug] = useState(photo.slug);
@@ -181,6 +182,7 @@ export function PhotoDetailShell({ photo }: Props) {
     setDeleteConfirmText("");
     setStatus({ type: "idle" });
     setAiSuggestStatus({ type: "idle" });
+    setAiPrompt("");
   }, [photo]);
 
   const onResuggest = async () => {
@@ -208,6 +210,7 @@ export function PhotoDetailShell({ photo }: Props) {
 
       const formData = new FormData();
       formData.set("file", aiFile);
+      formData.set("prompt", aiPrompt.trim());
 
       const response = await fetch("/api/admin/photos/ai-suggest", {
         method: "POST",
@@ -464,6 +467,17 @@ export function PhotoDetailShell({ photo }: Props) {
                 {aiSuggestStatus.type === "loading" ? "AI 재추천 중..." : "AI로 제목/태그 재추천"}
               </button>
             </div>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-stone-700">AI 추가 프롬프트 (선택)</span>
+              <textarea
+                value={aiPrompt}
+                onChange={(event) => setAiPrompt(event.target.value)}
+                rows={2}
+                placeholder="예: 차분한 톤, 야간 촬영 느낌을 강조해줘"
+                className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm"
+              />
+            </label>
 
             {aiSuggestStatus.type === "error" && (
               <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">

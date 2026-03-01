@@ -1,5 +1,68 @@
 # Execution Log
 
+## 2026-03-01 14:40 KST - AI 추천 `reasoning-only incomplete` 재발 대응 (compact rescue)
+
+- Date/time: 2026-03-01 14:40 KST
+- Goal: `Empty model response (status=incomplete, output_types=reasoning, content_types=none)` 재발 시에도 AI 메타데이터 추천이 성공하도록 안정성 강화.
+- Steps taken:
+  - `src/app/api/admin/photos/ai-suggest/route.ts` 수정:
+    - 사용자 추가 프롬프트 최대 길이를 600자→240자로 축소.
+    - 프롬프트 빌더를 `full`/`compact` 모드로 분리.
+    - 일반 재시도(기존 토큰 budget) 실패 후, `compact` 지시 + reasoning 미포함 요청으로 1회 rescue 재시도 경로 추가.
+    - 마지막 budget 실패 시 즉시 throw하지 않고 rescue 분기로 진입하도록 제어 흐름 수정.
+  - `src/app/api/admin/photos/ai-suggest/route.test.ts` 보강:
+    - 3회 연속 `incomplete/reasoning-only` 후 compact rescue 호출로 성공하는 시나리오 테스트 추가.
+  - 검증 실행:
+    - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+    - `npm run lint`
+- Troubleshooting:
+  - Issue: 재시도 로직이 있어도 마지막 시도에서 throw되어 rescue 경로가 실행되지 않음.
+  - Cause: 마지막 토큰 budget에서 `throw`로 함수가 즉시 종료되는 제어 흐름.
+  - Fix: 마지막 시도 실패 시 `break` 후 rescue 분기 실행으로 변경.
+- Tech stack/tools used:
+  - Next.js Route Handler
+  - OpenAI Responses API (`gpt-5-nano`)
+  - Vitest
+  - ESLint
+- Usage notes or commands:
+  - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+  - `npm run lint`
+- Next action:
+  - 운영에서 동일 이미지 + 추가 프롬프트로 재시도해 502 재발 여부 확인, 재발 시 요청/응답 `openaiRequestId` 기반 샘플 축적.
+
+## 2026-03-01 14:34 KST - AI 추천에 사용자 추가 프롬프트 입력 기능 추가
+
+- Date/time: 2026-03-01 14:34 KST
+- Goal: 이미지 기반 AI 메타데이터 추천 시 사용자가 추가 지시(prompt)를 직접 입력해 결과를 제어할 수 있도록 개선.
+- Steps taken:
+  - `src/app/api/admin/photos/ai-suggest/route.ts` 수정:
+    - FormData에서 `prompt` 필드 수신.
+    - `sanitizeUserPrompt` 추가(최대 600자, trim)로 안전한 입력만 모델 프롬프트에 반영.
+    - 모델 입력 텍스트에 `Additional user guidance: ...` 문구로 사용자 지시 병합.
+  - `src/app/admin/upload/page.tsx` 수정:
+    - `AI 추가 프롬프트 (선택)` 텍스트영역 UI 추가.
+    - AI 추천 요청 시 `formData.set("prompt", aiPrompt.trim())` 전송.
+  - `src/components/photo-detail-shell.tsx` 수정:
+    - 편집 모달 내 `AI 추가 프롬프트 (선택)` 입력 UI 추가.
+    - AI 재추천 요청 시 `prompt` 값 포함 전송.
+  - 테스트 보강:
+    - `src/app/api/admin/photos/ai-suggest/route.test.ts`에 사용자 prompt가 실제 모델 instruction에 포함되는지 검증 케이스 추가.
+  - 검증 실행:
+    - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+    - `npm run lint`
+- Troubleshooting:
+  - Troubleshooting: none.
+- Tech stack/tools used:
+  - Next.js App Router (route handler + client components)
+  - OpenAI Responses API prompt composition
+  - Vitest
+  - ESLint
+- Usage notes or commands:
+  - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+  - `npm run lint`
+- Next action:
+  - 운영에서 실제 이미지로 추가 프롬프트 적용 결과를 확인하고, 필요 시 프롬프트 템플릿(예: 톤/태그 우선순위) 예시를 UI 도움말로 확장.
+
 ## 2026-03-01 14:01 KST - Admin Photos 목록 413(payload too large) 대응
 
 - Date/time: 2026-03-01 14:01 KST

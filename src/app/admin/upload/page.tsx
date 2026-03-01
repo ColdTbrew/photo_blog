@@ -341,6 +341,7 @@ export default function AdminUploadPage() {
   const [status, setStatus] = useState<Status>({ type: "idle" });
   const [aiStatus, setAiStatus] = useState<Status>({ type: "idle" });
   const [aiOverwriteExisting, setAiOverwriteExisting] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
 
   const supabase = useMemo(() => {
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
@@ -424,6 +425,7 @@ export default function AdminUploadPage() {
       const aiFile = await createAiSuggestionImage(targetFile);
       const formData = new FormData();
       formData.set("file", aiFile);
+      formData.set("prompt", aiPrompt.trim());
 
       const response = await fetch("/api/admin/photos/ai-suggest", {
         method: "POST",
@@ -685,6 +687,20 @@ export default function AdminUploadPage() {
               기존 값 덮어쓰기
             </label>
           </div>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-stone-700">AI 추가 프롬프트 (선택)</span>
+            <textarea
+              value={aiPrompt}
+              onChange={(event) => setAiPrompt(event.target.value)}
+              rows={3}
+              placeholder="예: 인물 중심으로 감성적인 제목, 태그에 film-look 포함"
+              className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none ring-stone-900 focus:ring"
+            />
+            <span className="mt-1 block text-xs text-stone-500">
+              이미지 분석 결과에 덧붙일 요구사항을 자유롭게 입력할 수 있습니다.
+            </span>
+          </label>
 
           {aiStatus.type === "error" && (
             <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
