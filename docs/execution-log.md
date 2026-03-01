@@ -1,5 +1,26 @@
 # Execution Log
 
+## 2026-03-01 14:48 KST - Vercel 빌드 실패(TypeScript + Vitest config) 수정
+
+- Date/time: 2026-03-01 14:48 KST
+- Goal: Vercel 배포 빌드에서 `vitest.config.ts` 타입 에러(`environmentMatchGlobs` 미지원)로 실패하는 문제 해결.
+- Steps taken:
+  - `vitest.config.ts`에서 `test.environmentMatchGlobs` 옵션 제거.
+  - 이미 각 컴포넌트 테스트 파일에 `@vitest-environment jsdom` 지시자가 있어 환경 분기 동작은 유지됨을 확인.
+  - 로컬 빌드 검증 실행: `npm run build`.
+- Troubleshooting:
+  - Issue: Next.js TypeScript 단계에서 `InlineConfig` 타입에 `environmentMatchGlobs` 속성이 없다는 컴파일 에러 발생.
+  - Cause: 현재 설치된 Vitest 버전/타입 정의에서 해당 옵션이 지원되지 않음.
+  - Fix: 비필수 옵션 제거 후 파일 단위 환경 지시자 방식으로 유지.
+- Tech stack/tools used:
+  - Next.js 16 build
+  - Vitest config
+  - TypeScript
+- Usage notes or commands:
+  - `npm run build`
+- Next action:
+  - 동일 커밋 재배포 후 Vercel 빌드 로그에서 TypeScript 단계 통과 여부 확인.
+
 ## 2026-03-01 14:40 KST - AI 추천 `reasoning-only incomplete` 재발 대응 (compact rescue)
 
 - Date/time: 2026-03-01 14:40 KST
