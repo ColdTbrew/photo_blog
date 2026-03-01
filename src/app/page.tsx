@@ -3,6 +3,8 @@ import { HomeNavDrawer } from "@/components/home-nav-drawer";
 import { MasonryFeed } from "@/components/masonry-feed";
 import { getPhotosPage } from "@/lib/photos";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const initialPage = await getPhotosPage({ limit: 15 });
 

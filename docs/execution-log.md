@@ -2324,3 +2324,29 @@
   - `npm run build`
 - 다음 액션:
   - 프로덕션 관리자 업로드에서 5MB 이상 이미지로 업로드 재검증 후, 필요 시 압축 품질/해상도 탐색 범위를 조정한다.
+
+## 2026-03-01 - 홈 피드 최신 업로드 미노출 문제 수정 (정적 최적화 해제)
+
+- 일시:
+  - 2026-03-01T15:36:40+0900 (KST)
+- 목표:
+  - 업로드 완료 후 Supabase에는 저장됐지만 배포 홈 피드에서 최신 이미지가 보이지 않는 문제를 해결한다.
+- 수행 단계:
+  - 배포 API를 점검해 `blue-sky-and-building` 슬러그가 `/api/photos` 응답에 포함되는 것을 확인했다.
+  - 배포 브라우저 재현에서 홈 피드가 과거 15개 정적 목록으로 유지되는 패턴을 확인했다.
+  - `src/app/page.tsx`에 `export const dynamic = "force-dynamic";`를 추가해 홈 피드를 서버 동적 렌더링으로 전환했다.
+  - `npm run lint`, `npm run build`로 검증했고, 빌드 출력에서 `/` 경로가 `ƒ (Dynamic)`으로 전환된 것을 확인했다.
+- 트러블슈팅:
+  - 이슈: 업로드 성공/Storage 존재에도 홈 배포 페이지에서 최신 이미지가 보이지 않음.
+  - 원인: 홈 페이지가 정적 최적화되어 빌드 시점 데이터가 고정되고, 초기 목록/hasMore 상태가 최신 DB와 불일치.
+  - 조치: 홈 페이지를 동적 렌더링으로 변경해 요청 시점 최신 목록을 반영하도록 수정.
+- 사용 기술/도구:
+  - Next.js App Router (`dynamic = "force-dynamic"`)
+  - Vercel 배포 API 확인(curl)
+  - ESLint, Next.js build
+- 사용 메모/명령어:
+  - `curl -sS 'https://coldbrew-log.vercel.app/api/photos?limit=50' | jq -r '.items[].slug'`
+  - `npm run lint`
+  - `npm run build`
+- 다음 액션:
+  - 배포 반영 후 홈에서 `blue-sky-and-building` 카드 노출 여부와 상세 페이지 렌더를 확인한다.
