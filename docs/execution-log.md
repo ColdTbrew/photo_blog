@@ -1,5 +1,40 @@
 # Execution Log
 
+## 2026-03-01 14:01 KST - Admin Photos 목록 413(payload too large) 대응
+
+- Date/time: 2026-03-01 14:01 KST
+- Goal: `/api/admin/photos` 호출 시 Vercel `FUNCTION_PAYLOAD_TOO_LARGE (413)`로 인해 관리자 목록 로딩이 실패하는 문제 해결.
+- Steps taken:
+  - `src/app/api/admin/photos/route.ts` GET 응답 경량화:
+    - 선택 컬럼을 목록 화면에 필요한 최소 필드(`id, slug, title, taken_at`)로 축소.
+    - `limit` 쿼리 파라미터 처리 추가(기본 300, 최대 1000).
+    - 응답에 `meta.limit`, `meta.truncated` 포함.
+  - `src/app/admin/photos/page.tsx` 에러 처리 보강:
+    - JSON이 아닌 에러 본문(예: Vercel plain-text 413)도 안전 처리하는 `parseJsonSafely` 추가.
+    - 요청 URL을 `/api/admin/photos?limit=300`으로 변경.
+    - 목록 타입을 페이지 전용 `AdminPhotoListItem`으로 분리해 실제 사용 필드만 처리.
+  - `src/app/api/admin/photos/route.test.ts` 업데이트:
+    - GET 응답 기대값을 경량 목록 구조에 맞게 수정.
+    - `limit` 호출 검증 추가.
+  - 검증 실행:
+    - `npm test -- src/app/api/admin/photos/route.test.ts`
+    - `npm test`
+    - `npm run lint`
+- Troubleshooting:
+  - Issue: 관리자 화면에서 `Unexpected token 'R'... is not valid JSON` 발생.
+  - Cause: 서버가 413 텍스트 응답을 반환했는데, 클라이언트가 무조건 `response.json()`으로 파싱.
+  - Fix: 서버 응답 크기 자체를 줄이고, 클라이언트에 비-JSON 에러 파싱 안전장치 추가.
+- Tech stack/tools used:
+  - Next.js Route Handler / Client Page
+  - Supabase query chaining (`select`, `order`, `limit`)
+  - Vitest, ESLint
+- Usage notes or commands:
+  - `npm test -- src/app/api/admin/photos/route.test.ts`
+  - `npm test`
+  - `npm run lint`
+- Next action:
+  - 운영에서 `/admin/photos` 재진입 테스트 후, 데이터가 300개를 초과하는 경우 페이지네이션(Load more) UI 추가 검토.
+
 ## 2026-03-01 13:50 KST - AI 추천 라우트 fallback 제거 및 gpt-5-nano 실호출 검증
 
 - Date/time: 2026-03-01 13:50 KST

@@ -3,16 +3,35 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAdminSession } from "@/lib/admin-auth-client";
-import type { Photo } from "@/types/photo";
 
 type Status =
   | { type: "idle" }
   | { type: "loading" }
   | { type: "error"; message: string };
 
+type AdminPhotoListItem = {
+  id: string;
+  slug: string;
+  title: string;
+  takenAt: string | null;
+};
+
+async function parseJsonSafely(response: Response): Promise<Record<string, unknown> | null> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return null;
+  }
+
+  try {
+    return (await response.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 export default function AdminPhotosPage() {
   const { isAuthenticated, isAdmin, session, signInWithGitHub, signOut } = useAdminSession();
-  const [items, setItems] = useState<Photo[]>([]);
+  const [items, setItems] = useState<AdminPhotoListItem[]>([]);
   const [status, setStatus] = useState<Status>({ type: "idle" });
 
   const load = useCallback(async () => {
@@ -22,19 +41,42 @@ export default function AdminPhotosPage() {
 
     setStatus({ type: "loading" });
     try {
-      const response = await fetch("/api/admin/photos", {
+      const response = await fetch("/api/admin/photos?limit=300", {
         cache: "no-store",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
 
-      const data = (await response.json()) as { error?: string; items?: Photo[] };
+      const data = await parseJsonSafely(response);
       if (!response.ok) {
-        throw new Error(data.error ?? "목록을 불러오지 못했습니다.");
+        const message =
+          typeof data?.error === "string"
+            ? data.error
+            : `목록을 불러오지 못했습니다. (HTTP ${response.status})`;
+        throw new Error(message);
       }
 
-      setItems(data.items ?? []);
+      const itemsRaw = Array.isArray(data?.items) ? data.items : [];
+      const normalized = itemsRaw
+        .map((item) => {
+          if (!item || typeof item !== "object") {
+            return null;
+          }
+          const row = item as Record<string, unknown>;
+          const id = typeof row.id === "string" ? row.id : "";
+          const slug = typeof row.slug === "string" ? row.slug : "";
+          const title = typeof row.title === "string" ? row.title : "";
+          const takenAt = typeof row.takenAt === "string" ? row.takenAt : null;
+
+          if (!id || !slug || !title) {
+            return null;
+          }
+          return { id, slug, title, takenAt };
+        })
+        .filter((item): item is AdminPhotoListItem => Boolean(item));
+
+      setItems(normalized);
       setStatus({ type: "idle" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "알 수 없는 오류";

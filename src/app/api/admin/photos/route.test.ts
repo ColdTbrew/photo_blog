@@ -29,6 +29,7 @@ const {
 
   const selectBuilder = {
     order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
     then(
       onFulfilled: (value: { data: unknown[] | null; error: { message: string } | null }) => unknown
     ) {
@@ -97,6 +98,7 @@ describe("/api/admin/photos", () => {
     createServiceRoleClientMock.mockReset();
 
     selectBuilder.order.mockClear();
+    selectBuilder.limit.mockClear();
     selectMock.mockClear();
     insertMock.mockReset();
     fromMock.mockClear();
@@ -143,50 +145,29 @@ describe("/api/admin/photos", () => {
       {
         id: "p1",
         slug: "first-shot",
-        src: "https://example.com/first.webp",
-        width: 3200,
-        height: 2400,
         title: "First",
-        caption: "Caption",
-        tags: ["street"],
         taken_at: "2026-01-10",
-        created_at: "2026-01-11T00:00:00.000Z",
-        exif_make: "FUJI",
-        exif_model: "X-T5",
-        exif_lens_model: null,
-        exif_iso: 160,
-        exif_focal_length_mm: 23,
-        exif_f_number: 2,
-        exif_exposure_time: "1/125s",
       },
     ];
 
-    const response = await GET(new Request("http://localhost/api/admin/photos"));
+    const response = await GET(new Request("http://localhost/api/admin/photos?limit=10"));
     const body = await response.json();
 
+    expect(selectBuilder.limit).toHaveBeenCalledWith(10);
     expect(response.status).toBe(200);
     expect(body).toEqual({
       items: [
         {
           id: "p1",
           slug: "first-shot",
-          src: "https://example.com/first.webp",
-          width: 3200,
-          height: 2400,
           title: "First",
-          caption: "Caption",
-          tags: ["street"],
           takenAt: "2026-01-10",
-          createdAt: "2026-01-11T00:00:00.000Z",
-          exifMake: "FUJI",
-          exifModel: "X-T5",
-          exifLensModel: null,
-          exifIso: 160,
-          exifFocalLengthMm: 23,
-          exifFNumber: 2,
-          exifExposureTime: "1/125s",
         },
       ],
+      meta: {
+        limit: 10,
+        truncated: false,
+      },
     });
   });
 

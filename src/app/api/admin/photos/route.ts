@@ -5,6 +5,8 @@ import { authorizeAdminRequest, createServiceRoleClient } from "@/lib/admin-auth
 
 const BUCKET = "photos";
 const DEFAULT_MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
+const DEFAULT_ADMIN_LIST_LIMIT = 300;
+const MAX_ADMIN_LIST_LIMIT = 1000;
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
@@ -123,21 +125,35 @@ function parseOptionalDate(raw: string, name: string): string | null {
   return parsed.toISOString().slice(0, 10);
 }
 
+function normalizeAdminListLimit(raw: string | null): number {
+  if (!raw) {
+    return DEFAULT_ADMIN_LIST_LIMIT;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_ADMIN_LIST_LIMIT;
+  }
+
+  return Math.min(MAX_ADMIN_LIST_LIMIT, Math.floor(parsed));
+}
+
 export async function GET(request: Request) {
   const authResult = await authorizeAdminRequest(request);
   if (!authResult.ok) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
 
+  const { searchParams } = new URL(request.url);
+  const limit = normalizeAdminListLimit(searchParams.get("limit"));
   const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from("photos")
-    .select(
-      "id, slug, src, width, height, title, caption, tags, taken_at, created_at, exif_make, exif_model, exif_lens_model, exif_iso, exif_focal_length_mm, exif_f_number, exif_exposure_time"
-    )
+    .select("id, slug, title, taken_at")
     .order("created_at", { ascending: false })
-    .order("slug", { ascending: true });
+    .order("slug", { ascending: true })
+    .limit(limit);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -147,22 +163,13 @@ export async function GET(request: Request) {
     items: (data ?? []).map((row) => ({
       id: row.id,
       slug: row.slug,
-      src: row.src,
-      width: row.width,
-      height: row.height,
       title: row.title,
-      caption: row.caption,
-      tags: row.tags,
       takenAt: row.taken_at,
-      createdAt: row.created_at,
-      exifMake: row.exif_make,
-      exifModel: row.exif_model,
-      exifLensModel: row.exif_lens_model,
-      exifIso: row.exif_iso,
-      exifFocalLengthMm: row.exif_focal_length_mm,
-      exifFNumber: row.exif_f_number,
-      exifExposureTime: row.exif_exposure_time,
     })),
+    meta: {
+      limit,
+      truncated: Array.isArray(data) ? data.length >= limit : false,
+    },
   });
 }
 
