@@ -102,12 +102,13 @@ async function createAiSuggestionImage(file: File): Promise<File> {
     return file;
   }
 
-  const sourceUrl = URL.createObjectURL(file);
+  let sourceUrl: string | null = null;
   try {
+    sourceUrl = URL.createObjectURL(file);
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new window.Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("이미지 로드에 실패했습니다."));
+      img.onerror = () => reject(new Error("image-load-failed"));
       img.src = sourceUrl;
     });
 
@@ -145,8 +146,13 @@ async function createAiSuggestionImage(file: File): Promise<File> {
       type: AI_IMAGE_TARGET_MIME,
       lastModified: Date.now(),
     });
+  } catch {
+    // Keep request alive with original file if preview conversion fails in browser.
+    return file;
   } finally {
-    URL.revokeObjectURL(sourceUrl);
+    if (sourceUrl) {
+      URL.revokeObjectURL(sourceUrl);
+    }
   }
 }
 

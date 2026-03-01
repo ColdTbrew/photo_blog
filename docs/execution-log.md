@@ -1,5 +1,40 @@
 # Execution Log
 
+## 2026-03-01 14:57 KST - 업로드/AI 추천 중 브라우저 URL 패턴 예외 방어
+
+- Date/time: 2026-03-01 14:57 KST
+- Goal: 업로드 플로우에서 `The string did not match the expected pattern.`가 발생해 AI 추천이 중단되는 케이스를 방어.
+- Steps taken:
+  - Vercel CLI로 운영 로그 확인:
+    - `npx vercel logs ... --json` 조회
+    - `POST /api/admin/photos/ai-suggest`는 200 확인
+    - `GET /api/admin/photos`의 413 현상은 별도 이슈로 확인
+  - `src/app/admin/upload/page.tsx` 수정:
+    - `createAiSuggestionImage`에서 `URL.createObjectURL`/이미지 디코딩 실패 시 예외를 던지지 않고 원본 파일로 폴백.
+    - blob URL revoke를 null-safe로 정리.
+  - `src/components/photo-detail-shell.tsx` 수정:
+    - 동일한 `createAiSuggestionImage` 폴백 처리 적용.
+  - 보안 정리:
+    - 점검용으로 pull한 `.env.vercel.production` 파일 삭제.
+  - 검증 실행:
+    - `npm run lint`
+    - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+- Troubleshooting:
+  - Issue: 브라우저에서 `The string did not match the expected pattern.` 예외로 AI 추천 동작 중단.
+  - Cause: 이미지 전처리 단계(Blob URL 생성/디코딩)에서 브라우저 환경별 예외 발생 가능.
+  - Fix: 전처리 실패 시 요청 자체를 실패시키지 않고 원본 파일 업로드 경로로 자동 폴백.
+- Tech stack/tools used:
+  - Vercel CLI (`vercel logs`, `vercel inspect`, `vercel env pull`)
+  - Next.js client components
+  - Vitest
+  - ESLint
+- Usage notes or commands:
+  - `npx vercel logs coldbrew-log.vercel.app --since 2h --no-follow --json`
+  - `npm run lint`
+  - `npm test -- src/app/api/admin/photos/ai-suggest/route.test.ts`
+- Next action:
+  - 운영에서 동일 업로드 시나리오 재시도 후, 동일 문구 재발 시 시각(분 단위) 기준으로 serverless function log를 추가 추적.
+
 ## 2026-03-01 14:48 KST - Vercel 빌드 실패(TypeScript + Vitest config) 수정
 
 - Date/time: 2026-03-01 14:48 KST
